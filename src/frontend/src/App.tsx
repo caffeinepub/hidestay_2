@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import Dashboard from "./pages/Dashboard";
 import SplashScreen from "./pages/SplashScreen";
+import StaySearch from "./pages/StaySearch";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +29,17 @@ const dashboardRoute = createRoute({
   component: Dashboard,
 });
 
-const routeTree = rootRoute.addChildren([splashRoute, dashboardRoute]);
+const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search",
+  component: StaySearch,
+});
+
+const routeTree = rootRoute.addChildren([
+  splashRoute,
+  dashboardRoute,
+  searchRoute,
+]);
 
 const router = createRouter({ routeTree });
 
