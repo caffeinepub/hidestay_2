@@ -40,6 +40,7 @@ import {
   MapPin,
   Phone,
   ShieldCheck,
+  Star,
   TrendingUp,
   UserCheck,
   UserPlus,
@@ -2329,6 +2330,288 @@ function UsersTab() {
   );
 }
 
+function FeaturedHotelsTab() {
+  const { actor } = useActor();
+  const [featuredIds, setFeaturedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("hidestay_featured_hotels");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const { data: approvedProperties = [], isLoading } = useQuery<Property[]>({
+    queryKey: ["approvedProperties"],
+    queryFn: async () => {
+      if (!actor) return [];
+      const result = await actor.getAllApprovedProperties();
+      return result;
+    },
+    enabled: !!actor,
+  });
+
+  const MOCK_APPROVED: Property[] = [
+    {
+      id: "prop-001",
+      propertyName: "The Mountain Retreat",
+      city: "Rishikesh",
+      address: "Near Laxman Jhula, Rishikesh",
+      propertyType: "Resort",
+      pricePerNight: BigInt(4500),
+      imageUrls: ["/assets/generated/category-resorts.dim_600x400.jpg"],
+      status: "approved",
+      ownerEmail: "owner@hidestay.com",
+      contactPhone: "+91 9876543210",
+      description: "Luxury mountain resort with stunning views.",
+      amenities: ["WiFi", "Pool", "Spa"],
+      rules: "No smoking",
+      checkinTime: "2:00 PM",
+      checkoutTime: "11:00 AM",
+    },
+    {
+      id: "prop-002",
+      propertyName: "Valley View Homestay",
+      city: "Mussoorie",
+      address: "Landour, Mussoorie",
+      propertyType: "Homestay",
+      pricePerNight: BigInt(2800),
+      imageUrls: ["/assets/generated/category-homestays.dim_600x400.jpg"],
+      status: "approved",
+      ownerEmail: "owner@hidestay.com",
+      contactPhone: "+91 9876543211",
+      description: "Cozy homestay with valley views.",
+      amenities: ["WiFi", "Breakfast"],
+      rules: "No pets",
+      checkinTime: "1:00 PM",
+      checkoutTime: "10:00 AM",
+    },
+    {
+      id: "prop-003",
+      propertyName: "Lake View Guest House",
+      city: "Nainital",
+      address: "Near Naini Lake, Nainital",
+      propertyType: "Guest House",
+      pricePerNight: BigInt(3200),
+      imageUrls: ["/assets/generated/category-guesthouses.dim_600x400.jpg"],
+      status: "approved",
+      ownerEmail: "owner@hidestay.com",
+      contactPhone: "+91 9876543212",
+      description: "Beautiful guest house with lake views.",
+      amenities: ["WiFi", "Parking"],
+      rules: "Quiet hours after 10 PM",
+      checkinTime: "12:00 PM",
+      checkoutTime: "11:00 AM",
+    },
+  ];
+
+  const displayProperties =
+    approvedProperties.length > 0 ? approvedProperties : MOCK_APPROVED;
+
+  const toggleFeatured = (id: string) => {
+    setFeaturedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        toast.success("Removed from Featured Hotels.");
+      } else {
+        next.add(id);
+        toast.success("Marked as Featured! Now visible on homepage.");
+      }
+      localStorage.setItem(
+        "hidestay_featured_hotels",
+        JSON.stringify([...next]),
+      );
+      return next;
+    });
+  };
+
+  const featuredProperties = displayProperties.filter((p) =>
+    featuredIds.has(p.id),
+  );
+  const nonFeaturedProperties = displayProperties.filter(
+    (p) => !featuredIds.has(p.id),
+  );
+
+  if (isLoading) {
+    return (
+      <div
+        className="text-center py-12 text-muted-foreground"
+        data-ocid="super_admin.featured.loading_state"
+      >
+        Loading approved properties...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8" data-ocid="super_admin.featured.section">
+      {/* Currently Featured */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Star className="w-5 h-5 text-[#FF9933] fill-[#FF9933]" />
+          <h3 className="font-semibold text-lg text-foreground">
+            Currently Featured
+          </h3>
+          <Badge variant="secondary" className="ml-1">
+            {featuredProperties.length}
+          </Badge>
+        </div>
+        {featuredProperties.length === 0 ? (
+          <div
+            className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground text-sm"
+            data-ocid="super_admin.featured.empty_state"
+          >
+            No featured hotels yet. Mark approved properties as featured below.
+          </div>
+        ) : (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            data-ocid="super_admin.featured.list"
+          >
+            {featuredProperties.map((prop, i) => (
+              <Card
+                key={prop.id}
+                className="overflow-hidden border-[#FF9933]/30 shadow-sm"
+                data-ocid={`super_admin.featured.item.${i + 1}`}
+              >
+                <div className="relative h-36 bg-gray-100">
+                  {prop.imageUrls.length > 0 ? (
+                    <img
+                      src={prop.imageUrls[0]}
+                      alt={prop.propertyName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-[#1F7A4C]" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <Badge className="bg-[#FF9933] text-white border-0 text-xs font-semibold gap-1">
+                      <Star className="w-3 h-3 fill-white" /> Featured
+                    </Badge>
+                  </div>
+                </div>
+                <CardContent className="p-3">
+                  <h4 className="font-semibold text-sm text-foreground line-clamp-1">
+                    {prop.propertyName}
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {prop.city}
+                  </p>
+                  <p className="text-xs font-medium text-[#1F7A4C] mt-1">
+                    ₹{Number(prop.pricePerNight).toLocaleString("en-IN")} /
+                    night
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                    data-ocid={`super_admin.featured.remove.button.${i + 1}`}
+                    onClick={() => toggleFeatured(prop.id)}
+                  >
+                    Remove from Featured
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* All Approved Properties */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle2 className="w-5 h-5 text-[#1F7A4C]" />
+          <h3 className="font-semibold text-lg text-foreground">
+            Approved Properties
+          </h3>
+          <Badge variant="secondary" className="ml-1">
+            {nonFeaturedProperties.length}
+          </Badge>
+        </div>
+        {nonFeaturedProperties.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground text-sm">
+            All approved properties are currently featured.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table data-ocid="super_admin.featured.table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Property</TableHead>
+                  <TableHead className="text-xs">Location</TableHead>
+                  <TableHead className="text-xs">Rating</TableHead>
+                  <TableHead className="text-xs">Price/Night</TableHead>
+                  <TableHead className="text-xs">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {nonFeaturedProperties.map((prop, i) => (
+                  <TableRow
+                    key={prop.id}
+                    data-ocid={`super_admin.featured.row.${i + 1}`}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {prop.imageUrls.length > 0 ? (
+                            <img
+                              src={prop.imageUrls[0]}
+                              alt={prop.propertyName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Building2 className="w-4 h-4 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm text-foreground line-clamp-1">
+                            {prop.propertyName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {prop.propertyType}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {prop.city}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                        <span className="text-sm font-medium">4.5</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm font-medium text-[#1F7A4C]">
+                      ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        className="bg-[#FF9933] hover:bg-[#e68a2e] text-white text-xs gap-1"
+                        data-ocid={`super_admin.featured.mark.button.${i + 1}`}
+                        onClick={() => toggleFeatured(prop.id)}
+                      >
+                        <Star className="w-3 h-3" /> Mark as Featured
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -2604,6 +2887,9 @@ export default function SuperAdmin() {
             <TabsTrigger value="users" data-ocid="super_admin.users.tab">
               Users
             </TabsTrigger>
+            <TabsTrigger value="featured" data-ocid="super_admin.featured.tab">
+              Featured Hotels
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -2620,6 +2906,10 @@ export default function SuperAdmin() {
 
           <TabsContent value="users">
             <UsersTab />
+          </TabsContent>
+
+          <TabsContent value="featured">
+            <FeaturedHotelsTab />
           </TabsContent>
         </Tabs>
       </main>

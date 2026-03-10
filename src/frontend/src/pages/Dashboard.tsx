@@ -8,10 +8,11 @@ import {
   MapPin,
   Palmtree,
   Search,
+  Star,
 } from "lucide-react";
 import type { Variants } from "motion/react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import React, { useState } from "react";
 
 const CATEGORIES = [
   {
@@ -48,6 +49,123 @@ const cardVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
+
+function TopStaysSection() {
+  const [featuredIds, setFeaturedIds] = useState<string[]>([]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load once
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("hidestay_featured_hotels");
+      if (stored) setFeaturedIds(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const MOCK_PROPERTIES = [
+    {
+      id: "prop-001",
+      propertyName: "The Mountain Retreat",
+      city: "Rishikesh",
+      pricePerNight: 4500,
+      rating: 4.8,
+      imageUrl: "/assets/generated/category-resorts.dim_600x400.jpg",
+      type: "Resort",
+    },
+    {
+      id: "prop-002",
+      propertyName: "Valley View Homestay",
+      city: "Mussoorie",
+      pricePerNight: 2800,
+      rating: 4.6,
+      imageUrl: "/assets/generated/category-homestays.dim_600x400.jpg",
+      type: "Homestay",
+    },
+    {
+      id: "prop-003",
+      propertyName: "Lake View Guest House",
+      city: "Nainital",
+      pricePerNight: 3200,
+      rating: 4.7,
+      imageUrl: "/assets/generated/category-guesthouses.dim_600x400.jpg",
+      type: "Guest House",
+    },
+  ];
+
+  const featuredProperties =
+    featuredIds.length > 0
+      ? MOCK_PROPERTIES.filter((p) => featuredIds.includes(p.id))
+      : MOCK_PROPERTIES;
+
+  if (featuredProperties.length === 0) return null;
+
+  return (
+    <div className="mt-14 mb-10">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="font-bold text-gray-900 text-2xl sm:text-3xl flex items-center gap-2">
+            <Star className="w-6 h-6 text-[#FF9933] fill-[#FF9933]" />
+            Top Stays
+          </h2>
+          <p className="text-gray-500 mt-1 text-sm">
+            Handpicked luxury properties across India
+          </p>
+        </div>
+      </div>
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+        data-ocid="dashboard.top_stays.list"
+      >
+        {featuredProperties.map((prop, i) => (
+          <motion.div
+            key={prop.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            data-ocid={`dashboard.top_stays.item.${i + 1}`}
+            className="group cursor-pointer rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 bg-white border border-gray-100"
+          >
+            <div className="relative h-48 overflow-hidden">
+              <img
+                src={prop.imageUrl}
+                alt={prop.propertyName}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute top-3 left-3">
+                <span className="bg-[#FF9933] text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-white" /> Featured
+                </span>
+              </div>
+              <div className="absolute bottom-3 left-3 right-3">
+                <h3 className="text-white font-bold text-base leading-tight drop-shadow">
+                  {prop.propertyName}
+                </h3>
+                <p className="text-white/80 text-xs flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3" />
+                  {prop.city}
+                </p>
+              </div>
+            </div>
+            <div className="p-3 flex items-center justify-between">
+              <div>
+                <span className="text-[#1F7A4C] font-bold text-base">
+                  ₹{prop.pricePerNight.toLocaleString("en-IN")}
+                </span>
+                <span className="text-gray-400 text-xs"> / night</span>
+              </div>
+              <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                <span className="text-xs font-semibold text-gray-700">
+                  {prop.rating}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -252,6 +370,9 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Top Stays / Featured Hotels */}
+        <TopStaysSection />
 
         {/* Features row */}
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
