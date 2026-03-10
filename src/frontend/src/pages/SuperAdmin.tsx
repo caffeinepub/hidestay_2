@@ -2,6 +2,13 @@ import type { Property } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import type { AdminAccount, RegisteredCustomer } from "@/context/AuthContext";
 import { useAuth } from "@/context/AuthContext";
 import { useActor } from "@/hooks/useActor";
@@ -1388,6 +1396,63 @@ function AdminAccountsTab() {
 }
 
 // ---- USERS TAB ----
+const MOCK_OWNER_PROPERTIES: Property[] = [
+  {
+    id: "prop-001",
+    ownerEmail: "owner@hidestay.com",
+    status: "approved",
+    propertyName: "The Mountain Retreat",
+    propertyType: "Resort",
+    imageUrls: ["/assets/generated/hero-alpine-valley.dim_1200x800.jpg"],
+    checkinTime: "2:00 PM",
+    checkoutTime: "11:00 AM",
+    city: "Rishikesh",
+    pricePerNight: BigInt(4500),
+    description:
+      "A serene mountain retreat nestled in the foothills of Rishikesh with breathtaking views of the Ganges.",
+    amenities: ["WiFi", "Breakfast", "Parking", "River View"],
+    address: "23, Tapovan Road, Rishikesh, Uttarakhand",
+    rules: "No smoking. No pets. Check-in after 2 PM.",
+    contactPhone: "9876540001",
+  },
+  {
+    id: "prop-002",
+    ownerEmail: "owner@hidestay.com",
+    status: "pending",
+    propertyName: "Himalayan Valley View",
+    propertyType: "Homestay",
+    imageUrls: ["/assets/generated/category-homestay.dim_800x600.jpg"],
+    checkinTime: "1:00 PM",
+    checkoutTime: "10:00 AM",
+    city: "Mussoorie",
+    pricePerNight: BigInt(2800),
+    description:
+      "A cosy Himalayan homestay with panoramic valley views and warm hospitality in the heart of Mussoorie.",
+    amenities: ["WiFi", "Mountain View", "Fireplace", "Home-cooked Meals"],
+    address: "12, Mall Road, Mussoorie, Uttarakhand",
+    rules: "No loud music after 10 PM. Vegetarian meals only.",
+    contactPhone: "9876540002",
+  },
+  {
+    id: "prop-003",
+    ownerEmail: "owner@hidestay.com",
+    status: "rejected",
+    propertyName: "Nainital Lake Cottage",
+    propertyType: "Guest House",
+    imageUrls: ["/assets/generated/category-guesthouse.dim_800x600.jpg"],
+    checkinTime: "12:00 PM",
+    checkoutTime: "11:00 AM",
+    city: "Nainital",
+    pricePerNight: BigInt(3200),
+    description:
+      "A charming lakeside cottage near Naini Lake offering tranquil stays and scenic boat rides.",
+    amenities: ["Lake View", "Parking", "Room Service"],
+    address: "5, Mallital, Nainital, Uttarakhand",
+    rules: "No outdoor fires. Quiet hours 10 PM–7 AM.",
+    contactPhone: "9876540003",
+  },
+];
+
 const MOCK_USERS: RegisteredCustomer[] = [
   {
     name: "Arjun Sharma",
@@ -1413,10 +1478,40 @@ const MOCK_USERS: RegisteredCustomer[] = [
 ];
 
 function UsersTab() {
+  const { actor, isFetching } = useActor();
   const { getAllUsers, disableUser, enableUser, deleteUser } = useAuth();
   const [tick, setTick] = useState(0);
   const [selected, setSelected] = useState<RegisteredCustomer | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    propertyName: "",
+    city: "",
+    pricePerNight: "",
+    description: "",
+  });
+  const [localProperties, setLocalProperties] = useState<Property[]>([]);
+
+  const { data: pendingProps = [] } = useQuery<Property[]>({
+    queryKey: ["all_pending_properties"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllPendingProperties();
+    },
+    enabled: !!actor && !isFetching,
+  });
+
+  const { data: approvedProps = [] } = useQuery<Property[]>({
+    queryKey: ["all_approved_properties_users"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllApprovedProperties();
+    },
+    enabled: !!actor && !isFetching,
+  });
 
   const registeredUsers = getAllUsers();
   const allUsers = registeredUsers.length === 0 ? MOCK_USERS : registeredUsers;
@@ -1463,13 +1558,465 @@ function UsersTab() {
     toast.success("Account deleted.");
   };
 
-  // Refresh selected from store after tick
+  void tick;
+
   const getLatestUser = (email: string): RegisteredCustomer | undefined => {
     return getAllUsers().find((u) => u.email === email);
   };
 
-  void tick;
+  // Get properties for a specific owner
+  const getOwnerProperties = (ownerEmail: string): Property[] => {
+    const backendAll = [...pendingProps, ...approvedProps];
+    const fromBackend = backendAll.filter((p) => p.ownerEmail === ownerEmail);
+    if (fromBackend.length > 0) return fromBackend;
+    // Use mock for demo owner
+    const mock = MOCK_OWNER_PROPERTIES.filter(
+      (p) => p.ownerEmail === ownerEmail,
+    );
+    // Merge with any local edits
+    if (localProperties.length > 0) {
+      return mock
+        .map((mp) => localProperties.find((lp) => lp.id === mp.id) ?? mp)
+        .filter((p) => p.ownerEmail === ownerEmail);
+    }
+    return mock;
+  };
 
+  const getStatusBadge = (status: string) => {
+    if (status === "approved")
+      return (
+        <Badge className="bg-green-100 text-green-700 font-body text-xs">
+          Approved
+        </Badge>
+      );
+    if (status === "rejected")
+      return (
+        <Badge className="bg-red-100 text-red-700 font-body text-xs">
+          Rejected
+        </Badge>
+      );
+    return (
+      <Badge className="bg-amber-100 text-amber-800 font-body text-xs">
+        Pending
+      </Badge>
+    );
+  };
+
+  // Property detail from owner view
+  if (selectedProperty && selected) {
+    const latest = getLatestUser(selected.email) ?? selected;
+    const currentProp =
+      localProperties.find((p) => p.id === selectedProperty.id) ??
+      selectedProperty;
+    return (
+      <div
+        data-ocid="super_admin.owner_property_detail.panel"
+        className="space-y-5"
+      >
+        <button
+          type="button"
+          onClick={() => setSelectedProperty(null)}
+          data-ocid="super_admin.owner_property_detail.back.button"
+          className="flex items-center gap-2 text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to {latest.name}'s Profile
+        </button>
+
+        {/* Use PropertyDetailView for display */}
+        <PropertyDetailView
+          prop={currentProp}
+          onBack={() => setSelectedProperty(null)}
+          onApprove={() => toast.info("Use Property Approvals tab to approve.")}
+          onReject={() => toast.info("Use Property Approvals tab to reject.")}
+          approving={false}
+          rejecting={false}
+        />
+
+        {/* Extra admin actions overlay */}
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="font-display font-bold text-foreground mb-3 text-sm">
+              Owner Admin Actions
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                data-ocid="super_admin.owner_property_detail.edit.button"
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary/5 font-body font-semibold flex items-center gap-2"
+                onClick={() => {
+                  setEditForm({
+                    propertyName: currentProp.propertyName,
+                    city: currentProp.city,
+                    pricePerNight: String(currentProp.pricePerNight),
+                    description: currentProp.description,
+                  });
+                  setEditOpen(true);
+                }}
+              >
+                <Building2 className="w-4 h-4" /> Edit Property Details
+              </Button>
+              <Button
+                data-ocid="super_admin.owner_property_detail.remove.button"
+                variant="outline"
+                className="border-red-400 text-red-600 hover:bg-red-50 font-body font-semibold flex items-center gap-2"
+                onClick={() => {
+                  toast.info("Property removed (demo).");
+                  setSelectedProperty(null);
+                }}
+              >
+                <XCircle className="w-4 h-4" /> Remove Property
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Edit Property Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent
+            data-ocid="super_admin.owner_property_detail.edit.dialog"
+            className="font-body max-w-md"
+          >
+            <DialogHeader>
+              <DialogTitle className="font-display font-bold text-foreground">
+                Edit Property Details
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm font-semibold text-foreground">
+                  Property Name
+                </Label>
+                <Input
+                  value={editForm.propertyName}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, propertyName: e.target.value }))
+                  }
+                  className="font-body"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm font-semibold text-foreground">
+                  Location (City)
+                </Label>
+                <Input
+                  value={editForm.city}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, city: e.target.value }))
+                  }
+                  className="font-body"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm font-semibold text-foreground">
+                  Price per Night (₹)
+                </Label>
+                <Input
+                  type="number"
+                  value={editForm.pricePerNight}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      pricePerNight: e.target.value,
+                    }))
+                  }
+                  className="font-body"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-body text-sm font-semibold text-foreground">
+                  Description
+                </Label>
+                <Textarea
+                  value={editForm.description}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  className="font-body resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                data-ocid="super_admin.owner_property_detail.edit.cancel.button"
+                variant="outline"
+                className="font-body"
+                onClick={() => setEditOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                data-ocid="super_admin.owner_property_detail.edit.save.button"
+                className="bg-primary text-white font-body font-semibold"
+                onClick={() => {
+                  const updated: Property = {
+                    ...currentProp,
+                    propertyName: editForm.propertyName,
+                    city: editForm.city,
+                    pricePerNight: BigInt(
+                      Number(editForm.pricePerNight) ||
+                        Number(currentProp.pricePerNight),
+                    ),
+                    description: editForm.description,
+                  };
+                  setLocalProperties((prev) => {
+                    const filtered2 = prev.filter((p) => p.id !== updated.id);
+                    return [...filtered2, updated];
+                  });
+                  setSelectedProperty(updated);
+                  setEditOpen(false);
+                  toast.success("Property details updated.");
+                }}
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Hotel Owner detail view
+  if (selected && getUserType(selected) === "Hotel Owner") {
+    const latest = getLatestUser(selected.email) ?? selected;
+    const ownerProps = getOwnerProperties(latest.email);
+    return (
+      <div data-ocid="super_admin.owner_detail.panel" className="space-y-5">
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          data-ocid="super_admin.owner_detail.back.button"
+          className="flex items-center gap-1.5 text-sm text-primary font-body hover:underline"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Users
+        </button>
+
+        {/* Owner Profile Card */}
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-7 h-7 text-amber-700" />
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-foreground text-xl">
+                  {latest.name}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className="bg-amber-100 text-amber-800 font-body text-xs">
+                    Hotel Owner
+                  </Badge>
+                  {latest.disabled ? (
+                    <Badge className="bg-red-100 text-red-700 font-body text-xs">
+                      Disabled
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Full Name
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.name}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Email Address
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.email}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Phone Number
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.phone || "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Account Created
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {formatDate(latest.createdAt)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Total Properties Listed
+                </p>
+                <p className="font-body font-bold text-primary text-lg">
+                  {ownerProps.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Properties Section */}
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" /> Properties
+            </h3>
+            {ownerProps.length === 0 ? (
+              <div
+                data-ocid="super_admin.owner_detail.properties.empty_state"
+                className="text-center py-10 text-muted-foreground font-body"
+              >
+                <Building2 className="w-8 h-8 mx-auto mb-2 text-primary/30" />
+                <p className="text-sm">
+                  No properties listed by this owner yet.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table data-ocid="super_admin.owner_detail.properties.table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
+                          Property Name
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
+                          Location
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
+                          Price / Night
+                        </TableHead>
+                        <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
+                          Status
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ownerProps.map((prop, i) => {
+                        const localProp =
+                          localProperties.find((lp) => lp.id === prop.id) ??
+                          prop;
+                        return (
+                          <TableRow
+                            key={prop.id}
+                            data-ocid={`super_admin.owner_detail.property.row.${i + 1}`}
+                            onClick={() => setSelectedProperty(localProp)}
+                            className="cursor-pointer hover:bg-primary/5 transition-colors"
+                          >
+                            <TableCell className="font-body font-semibold text-foreground">
+                              {localProp.propertyName}
+                            </TableCell>
+                            <TableCell className="font-body text-muted-foreground flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                              {localProp.city}
+                            </TableCell>
+                            <TableCell className="font-body font-medium text-primary">
+                              ₹
+                              {Number(localProp.pricePerNight).toLocaleString(
+                                "en-IN",
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(localProp.status)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-3">
+                  {ownerProps.map((prop, i) => {
+                    const localProp =
+                      localProperties.find((lp) => lp.id === prop.id) ?? prop;
+                    return (
+                      <Card
+                        key={prop.id}
+                        data-ocid={`super_admin.owner_detail.property.row.${i + 1}`}
+                        onClick={() => setSelectedProperty(localProp)}
+                        className="border-border shadow-xs cursor-pointer hover:border-primary/40 transition-colors"
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-body font-semibold text-foreground text-sm">
+                                {localProp.propertyName}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-body flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3 h-3 text-primary" />
+                                {localProp.city}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-body font-bold text-primary text-sm">
+                                ₹
+                                {Number(localProp.pricePerNight).toLocaleString(
+                                  "en-IN",
+                                )}
+                              </p>
+                              <div className="mt-1">
+                                {getStatusBadge(localProp.status)}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-3">
+          {latest.disabled ? (
+            <Button
+              onClick={() => handleEnable(latest.email)}
+              data-ocid="super_admin.owner_detail.enable.button"
+              className="bg-green-600 hover:bg-green-700 text-white font-body font-semibold flex items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4" /> Enable Account
+            </Button>
+          ) : (
+            <Button
+              onClick={() => handleDisable(latest.email)}
+              data-ocid="super_admin.owner_detail.disable.button"
+              variant="outline"
+              className="border-amber-500 text-amber-700 hover:bg-amber-50 font-body font-semibold flex items-center gap-2"
+            >
+              <X className="w-4 h-4" /> Disable Account
+            </Button>
+          )}
+          <Button
+            onClick={() => handleDelete(latest.email)}
+            data-ocid="super_admin.owner_detail.delete.button"
+            variant="outline"
+            className="border-red-400 text-red-600 hover:bg-red-50 font-body font-semibold flex items-center gap-2"
+          >
+            <XCircle className="w-4 h-4" /> Delete Account
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Generic customer detail view
   if (selected) {
     const latest = getLatestUser(selected.email) ?? selected;
     const userType = getUserType(latest);
@@ -1495,13 +2042,7 @@ function UsersTab() {
                   {latest.name}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge
-                    className={
-                      userType === "Hotel Owner"
-                        ? "bg-amber-100 text-amber-800 font-body text-xs"
-                        : "bg-blue-100 text-blue-800 font-body text-xs"
-                    }
-                  >
+                  <Badge className="bg-blue-100 text-blue-800 font-body text-xs">
                     {userType}
                   </Badge>
                   {latest.disabled ? (
@@ -1560,13 +2101,9 @@ function UsersTab() {
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
-                  {userType === "Hotel Owner"
-                    ? "Properties Listed"
-                    : "Total Bookings"}
+                  Total Bookings
                 </p>
-                <p className="font-body font-medium text-foreground">
-                  {userType === "Hotel Owner" ? "1" : "2"}
-                </p>
+                <p className="font-body font-medium text-foreground">2</p>
               </div>
             </div>
           </CardContent>
@@ -1578,47 +2115,24 @@ function UsersTab() {
             <h3 className="font-display font-bold text-foreground mb-3 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" /> Recent Activity
             </h3>
-            {userType === "Customer" ? (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
-                  <span className="text-muted-foreground">Last booking</span>
-                  <span className="font-medium text-foreground">
-                    HIDE-20260310-4821
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
-                  <span className="text-muted-foreground">Destination</span>
-                  <span className="font-medium text-foreground">Rishikesh</span>
-                </div>
-                <div className="flex justify-between text-sm font-body py-2">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge className="bg-green-100 text-green-700 font-body text-xs">
-                    Confirmed
-                  </Badge>
-                </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                <span className="text-muted-foreground">Last booking</span>
+                <span className="font-medium text-foreground">
+                  HIDE-20260310-4821
+                </span>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
-                  <span className="text-muted-foreground">Property</span>
-                  <span className="font-medium text-foreground">
-                    The Mountain Retreat
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
-                  <span className="text-muted-foreground">Property Status</span>
-                  <Badge className="bg-green-100 text-green-700 font-body text-xs">
-                    Approved
-                  </Badge>
-                </div>
-                <div className="flex justify-between text-sm font-body py-2">
-                  <span className="text-muted-foreground">
-                    Total Reservations
-                  </span>
-                  <span className="font-medium text-foreground">3</span>
-                </div>
+              <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                <span className="text-muted-foreground">Destination</span>
+                <span className="font-medium text-foreground">Rishikesh</span>
               </div>
-            )}
+              <div className="flex justify-between text-sm font-body py-2">
+                <span className="text-muted-foreground">Status</span>
+                <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                  Confirmed
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -1708,11 +2222,8 @@ function UsersTab() {
                           <p className="font-body font-semibold text-foreground text-sm">
                             {u.name}
                           </p>
-                          <p className="text-muted-foreground text-xs font-body">
+                          <p className="text-xs text-muted-foreground font-body">
                             {u.email}
-                          </p>
-                          <p className="text-muted-foreground text-xs font-body">
-                            {u.phone}
                           </p>
                         </div>
                       </div>
@@ -1720,18 +2231,18 @@ function UsersTab() {
                         <Badge
                           className={
                             uType === "Hotel Owner"
-                              ? "bg-amber-100 text-amber-800 font-body text-[10px]"
-                              : "bg-blue-100 text-blue-800 font-body text-[10px]"
+                              ? "bg-amber-100 text-amber-800 font-body text-xs"
+                              : "bg-blue-100 text-blue-800 font-body text-xs"
                           }
                         >
                           {uType}
                         </Badge>
                         {u.disabled ? (
-                          <Badge className="bg-red-100 text-red-700 font-body text-[10px]">
+                          <Badge className="bg-red-100 text-red-700 font-body text-xs">
                             Disabled
                           </Badge>
                         ) : (
-                          <Badge className="bg-green-100 text-green-700 font-body text-[10px]">
+                          <Badge className="bg-green-100 text-green-700 font-body text-xs">
                             Active
                           </Badge>
                         )}
@@ -1747,20 +2258,20 @@ function UsersTab() {
           <div className="hidden md:block">
             <Table data-ocid="super_admin.users.table">
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-body text-xs font-semibold">
+                <TableRow>
+                  <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
                     Name
                   </TableHead>
-                  <TableHead className="font-body text-xs font-semibold">
+                  <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
                     Email
                   </TableHead>
-                  <TableHead className="font-body text-xs font-semibold">
+                  <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
                     Phone
                   </TableHead>
-                  <TableHead className="font-body text-xs font-semibold">
-                    User Type
+                  <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
+                    Type
                   </TableHead>
-                  <TableHead className="font-body text-xs font-semibold">
+                  <TableHead className="font-body text-xs uppercase tracking-wide text-muted-foreground">
                     Status
                   </TableHead>
                 </TableRow>
@@ -1771,17 +2282,17 @@ function UsersTab() {
                   return (
                     <TableRow
                       key={u.email}
-                      data-ocid={`super_admin.users.row.${i + 1}`}
+                      data-ocid={`super_admin.users.item.${i + 1}`}
                       onClick={() => setSelected(u)}
                       className="cursor-pointer hover:bg-primary/5 transition-colors"
                     >
-                      <TableCell className="font-body text-sm font-medium text-foreground">
+                      <TableCell className="font-body font-semibold text-foreground">
                         {u.name}
                       </TableCell>
-                      <TableCell className="font-body text-sm text-muted-foreground">
+                      <TableCell className="font-body text-muted-foreground">
                         {u.email}
                       </TableCell>
-                      <TableCell className="font-body text-sm text-muted-foreground">
+                      <TableCell className="font-body text-muted-foreground">
                         {u.phone || "—"}
                       </TableCell>
                       <TableCell>
