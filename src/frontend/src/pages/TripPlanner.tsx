@@ -1,3 +1,4 @@
+import { loadHighlights } from "@/components/DestinationHighlightsTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
@@ -666,12 +667,45 @@ function generatePlan(
     if (diff > 0 && diff <= 10) duration = diff;
   }
 
+  // Merge curated highlights from Super Admin
+  const highlights = loadHighlights();
+  const curated = highlights.find(
+    (h) => h.destination.toLowerCase() === destination.toLowerCase(),
+  );
+
+  const baseAttractions = data.attractions;
+  const mergedAttractions = curated
+    ? [
+        ...curated.attractions,
+        ...baseAttractions.filter(
+          (a) => !curated.attractions.some((ca) => ca.name === a.name),
+        ),
+      ]
+    : baseAttractions;
+
+  const baseHotels = generateHotels(destination, budget, travelType);
+  const curatedHotels = curated
+    ? curated.recommendedHotels.map((h) => ({
+        name: h.name,
+        type: h.type,
+        price: h.pricePerNight,
+        rating: h.rating,
+        amenities: ["WiFi", "Breakfast", "Parking"],
+        image:
+          "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
+      }))
+    : [];
+  const mergedHotels =
+    curatedHotels.length > 0
+      ? [...curatedHotels, ...baseHotels].slice(0, 5)
+      : baseHotels;
+
   return {
     destination,
     duration,
     travelType,
-    suggestedHotels: generateHotels(destination, budget, travelType),
-    attractions: data.attractions,
+    suggestedHotels: mergedHotels,
+    attractions: mergedAttractions,
     itinerary: generateItinerary(destination, duration, travelType),
     tips:
       (data.tips as Record<TravelType, string[]>)[travelType] ||

@@ -1,4 +1,5 @@
 import type { Property } from "@/backend";
+import DestinationHighlightsTab from "@/components/DestinationHighlightsTab";
 import type { VirtualTour } from "@/components/VirtualTourManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -3846,6 +3847,12 @@ export default function SuperAdmin() {
             <TabsTrigger value="tours" data-ocid="super_admin.tours.tab">
               Virtual Tours
             </TabsTrigger>
+            <TabsTrigger
+              value="destinations"
+              data-ocid="super_admin.destinations.tab"
+            >
+              Destination Highlights
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -3873,6 +3880,10 @@ export default function SuperAdmin() {
           <TabsContent value="settings">
             <PlatformSettingsTab />
           </TabsContent>
+          <TabsContent value="destinations">
+            <DestinationHighlightsTab />
+          </TabsContent>
+
           <TabsContent value="tours">
             <VirtualTourApprovalsTab />
           </TabsContent>
