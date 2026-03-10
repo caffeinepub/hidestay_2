@@ -1,4 +1,5 @@
 import BookingForm from "@/components/BookingForm";
+import PropertyMap from "@/components/PropertyMap";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
@@ -77,7 +78,7 @@ export default function StayDetails() {
   const id = search.id ?? "hotel1";
   const category = search.category ?? "Hotels";
   const name = search.name ?? "The Grand Meridian";
-  const location = search.location ?? "Bali, Indonesia";
+  const location = search.location ?? "Rishikesh, Uttarakhand";
   const price = search.price ?? "₹12,000/night";
   const rating = Number(search.rating ?? 4.8);
 
@@ -272,7 +273,7 @@ export default function StayDetails() {
           </div>
         </motion.div>
 
-        {/* Map */}
+        {/* Map & Location */}
         <motion.section
           data-ocid="details.map.section"
           initial={{ opacity: 0, y: 16 }}
@@ -280,24 +281,10 @@ export default function StayDetails() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mb-8"
         >
-          <h2 className="font-display font-bold text-foreground text-xl mb-3">
-            Location
+          <h2 className="font-display font-bold text-foreground text-xl mb-4">
+            Location &amp; Map
           </h2>
-          <p className="text-xs text-muted-foreground font-body mb-3 flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-primary" />
-            {location} · Map view (representative)
-          </p>
-          <div className="rounded-2xl overflow-hidden border border-border shadow-xs">
-            <iframe
-              title="Property Location Map"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=72.8,18.9,73.0,19.1&layer=mapnik"
-              width="100%"
-              height="250"
-              className="block"
-              style={{ border: 0 }}
-              loading="lazy"
-            />
-          </div>
+          <PropertyMap location={location} propertyName={name} />
         </motion.section>
 
         {/* Rules */}
