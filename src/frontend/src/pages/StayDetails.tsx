@@ -1,6 +1,7 @@
 import BookingForm from "@/components/BookingForm";
 import PropertyMap from "@/components/PropertyMap";
 import ReviewsSection from "@/components/ReviewsSection";
+import VirtualTourSection from "@/components/VirtualTourSection";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -251,6 +252,15 @@ export default function StayDetails() {
             ))}
           </div>
         </motion.section>
+
+        {/* 360° Virtual Tours */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.22 }}
+        >
+          <VirtualTourSection propertyId={id} />
+        </motion.div>
 
         {/* Check-in / Check-out */}
         <motion.div

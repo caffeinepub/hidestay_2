@@ -1,5 +1,6 @@
 import { ExternalBlob } from "@/backend";
 import type { Booking, Property } from "@/backend";
+import VirtualTourManager from "@/components/VirtualTourManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
   ArrowLeft,
   Building2,
   CalendarDays,
+  Camera,
   Clock,
   IndianRupee,
   Loader2,
@@ -713,6 +715,14 @@ export default function HotelAdmin() {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger
+              value="tours"
+              data-ocid="hotel_admin.tours.tab"
+              className="flex-1 font-body"
+            >
+              <Camera className="w-4 h-4 mr-1.5" />
+              360° Tours
+            </TabsTrigger>
           </TabsList>
 
           {/* Properties Tab */}
@@ -899,6 +909,11 @@ export default function HotelAdmin() {
                 ))}
               </>
             )}
+          </TabsContent>
+
+          {/* 360° Tours Tab */}
+          <TabsContent value="tours">
+            <VirtualTourManager />
           </TabsContent>
         </Tabs>
       </main>
