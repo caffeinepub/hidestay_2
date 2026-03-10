@@ -57,8 +57,7 @@ export default function SuperAdminLogin() {
       setForgotError("Please enter your email or phone number.");
       return;
     }
-    // Check root admin
-    const ROOT_EMAIL = "admin@hidestay.com";
+    const ROOT_EMAIL = "hidestayindiapvtltd@gmail.com";
     const ROOT_PHONE = "9999000001";
     const admins = getAdminAccounts();
     const isRoot = id === ROOT_EMAIL || id === ROOT_PHONE;
@@ -137,7 +136,7 @@ export default function SuperAdminLogin() {
                   <Input
                     id="email"
                     type="text"
-                    placeholder="admin@hidestay.com"
+                    placeholder="Enter admin email"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -262,7 +261,7 @@ export default function SuperAdminLogin() {
                   <Input
                     id="forgot-identifier"
                     type="text"
-                    placeholder="admin@hidestay.com"
+                    placeholder="Enter your registered email"
                     value={forgotIdentifier}
                     onChange={(e) => {
                       setForgotIdentifier(e.target.value);

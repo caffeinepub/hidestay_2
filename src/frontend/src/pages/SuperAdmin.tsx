@@ -200,7 +200,7 @@ function PropertyApprovalCard({
 
 const ROOT_ADMIN: AdminAccount & { isRoot: true } = {
   name: "Super Admin",
-  email: "admin@hidestay.com",
+  email: "hidestayindiapvtltd@gmail.com",
   phone: "9999000001",
   password: "",
   isRoot: true,

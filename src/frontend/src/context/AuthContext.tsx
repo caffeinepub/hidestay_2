@@ -51,6 +51,16 @@ interface AuthContextValue extends AuthState {
     emailOrPhone: string,
     newPassword: string,
   ) => Promise<boolean>;
+  resetCustomerPassword: (
+    emailOrPhone: string,
+    newPassword: string,
+  ) => Promise<boolean>;
+  resetHotelOwnerPassword: (
+    emailOrPhone: string,
+    newPassword: string,
+  ) => Promise<boolean>;
+  checkCustomerExists: (emailOrPhone: string) => boolean;
+  checkHotelOwnerExists: (emailOrPhone: string) => boolean;
   getAdminAccounts: () => AdminAccount[];
   setHotelOwner: (owner: HotelOwner | null) => void;
   logout: () => void;
@@ -62,10 +72,11 @@ const STORAGE_KEY = "hidestay_auth";
 const CUSTOMERS_KEY = "hidestay_customers";
 const ADMINS_KEY = "hidestay_admins";
 const ROOT_ADMIN_PASSWORD_KEY = "hidestay_root_admin_password";
+const OWNER_PASSWORD_OVERRIDES_KEY = "hidestay_owner_pw_overrides";
 
-const ROOT_ADMIN_EMAIL = "admin@hidestay.com";
+const ROOT_ADMIN_EMAIL = "hidestayindiapvtltd@gmail.com";
 const ROOT_ADMIN_PHONE = "9999000001";
-const DEFAULT_ROOT_PASSWORD = "admin123";
+const DEFAULT_ROOT_PASSWORD = "Bablu@1003";
 
 function getRegisteredCustomers(): RegisteredCustomer[] {
   try {
@@ -97,6 +108,20 @@ function saveAdminAccounts(admins: AdminAccount[]) {
 
 function getRootAdminPassword(): string {
   return localStorage.getItem(ROOT_ADMIN_PASSWORD_KEY) || DEFAULT_ROOT_PASSWORD;
+}
+
+function getOwnerPasswordOverrides(): Record<string, string> {
+  try {
+    const saved = localStorage.getItem(OWNER_PASSWORD_OVERRIDES_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function saveOwnerPasswordOverrides(overrides: Record<string, string>) {
+  localStorage.setItem(OWNER_PASSWORD_OVERRIDES_KEY, JSON.stringify(overrides));
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -154,19 +179,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
   ): Promise<boolean> => {
-    if (email === "owner@hidestay.com" && password === "hotel123") {
-      const syntheticOwner: HotelOwner = {
-        name: "Hotel Owner",
-        email,
-        phone: "",
-        password: "",
-      };
-      setState({
-        role: "hotel_owner",
-        user: { name: "Hotel Owner", email },
-        hotelOwner: syntheticOwner,
-      });
-      return true;
+    // Check if there's a password override for this email
+    const overrides = getOwnerPasswordOverrides();
+    const overridePassword = overrides[email.toLowerCase()];
+
+    if (email === "owner@hidestay.com") {
+      const validPassword = overridePassword || "hotel123";
+      if (password === validPassword) {
+        const syntheticOwner: HotelOwner = {
+          name: "Hotel Owner",
+          email,
+          phone: "",
+          password: "",
+        };
+        setState({
+          role: "hotel_owner",
+          user: { name: "Hotel Owner", email },
+          hotelOwner: syntheticOwner,
+        });
+        return true;
+      }
+      return false;
     }
     return false;
   };
@@ -275,6 +308,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const checkCustomerExists = (emailOrPhone: string): boolean => {
+    const customers = getRegisteredCustomers();
+    // If no customers registered yet, treat any input as valid (demo mode)
+    if (customers.length === 0) return true;
+    return customers.some(
+      (c) => c.email === emailOrPhone || c.phone === emailOrPhone,
+    );
+  };
+
+  const resetCustomerPassword = async (
+    emailOrPhone: string,
+    newPassword: string,
+  ): Promise<boolean> => {
+    const customers = getRegisteredCustomers();
+    if (customers.length === 0) return false;
+    const idx = customers.findIndex(
+      (c) => c.email === emailOrPhone || c.phone === emailOrPhone,
+    );
+    if (idx === -1) return false;
+    customers[idx].password = newPassword;
+    saveRegisteredCustomers(customers);
+    return true;
+  };
+
+  const checkHotelOwnerExists = (emailOrPhone: string): boolean => {
+    // Check hardcoded demo owner
+    if (emailOrPhone === "owner@hidestay.com" || emailOrPhone === "hotel123")
+      return true;
+    return false;
+  };
+
+  const resetHotelOwnerPassword = async (
+    emailOrPhone: string,
+    newPassword: string,
+  ): Promise<boolean> => {
+    const key = emailOrPhone.toLowerCase();
+    const overrides = getOwnerPasswordOverrides();
+    // Only allow reset for known demo owner
+    if (emailOrPhone === "owner@hidestay.com") {
+      overrides[key] = newPassword;
+      saveOwnerPasswordOverrides(overrides);
+      return true;
+    }
+    // For backend-registered owners, store override by email
+    overrides[key] = newPassword;
+    saveOwnerPasswordOverrides(overrides);
+    return true;
+  };
+
   const getAdminAccounts = (): AdminAccount[] => {
     return getStoredAdmins();
   };
@@ -296,6 +378,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         registerCustomer,
         registerAdminAccount,
         resetAdminPassword,
+        resetCustomerPassword,
+        resetHotelOwnerPassword,
+        checkCustomerExists,
+        checkHotelOwnerExists,
         getAdminAccounts,
         setHotelOwner,
         logout,
