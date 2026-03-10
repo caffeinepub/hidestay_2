@@ -27,6 +27,7 @@ import { useActor } from "@/hooks/useActor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  Activity,
   ArrowLeft,
   Building2,
   Check,
@@ -39,6 +40,7 @@ import {
   LogOut,
   MapPin,
   Phone,
+  ScrollText,
   ShieldCheck,
   Star,
   TrendingUp,
@@ -61,6 +63,91 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
+
+// ── Activity Log Utility ─────────────────────────────────────────────────────
+const ACTIVITY_LOG_KEY = "hidestay_activity_log";
+
+interface ActivityLogEntry {
+  id: string;
+  action: string;
+  category: "property" | "booking" | "user" | "featured";
+  adminName: string;
+  timestamp: string;
+}
+
+const SAMPLE_ACTIVITY_LOG: ActivityLogEntry[] = [
+  {
+    id: "log-001",
+    action: "Property 'Mountain Dew Resort' approved",
+    category: "property",
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+  },
+  {
+    id: "log-002",
+    action: "Property 'Lake View Guest House' marked as Featured",
+    category: "featured",
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+  },
+  {
+    id: "log-003",
+    action: "Booking HIDE-20260301-1421 confirmed",
+    category: "booking",
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+  },
+  {
+    id: "log-004",
+    action: "User account rahul.verma@email.com disabled",
+    category: "user",
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+  },
+  {
+    id: "log-005",
+    action: "Property 'Old Heritage Inn' rejected",
+    category: "property",
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
+  },
+];
+
+function getActivityLog(): ActivityLogEntry[] {
+  try {
+    const stored = localStorage.getItem(ACTIVITY_LOG_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as ActivityLogEntry[];
+      return parsed;
+    }
+    // Seed with sample data on first load
+    localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(SAMPLE_ACTIVITY_LOG));
+    return SAMPLE_ACTIVITY_LOG;
+  } catch {
+    return SAMPLE_ACTIVITY_LOG;
+  }
+}
+
+function addActivityLog(
+  action: string,
+  category: ActivityLogEntry["category"],
+) {
+  const entries = getActivityLog();
+  const newEntry: ActivityLogEntry = {
+    id: `log-${Date.now()}`,
+    action,
+    category,
+    adminName: "HIDESTAY Admin",
+    timestamp: new Date().toISOString(),
+  };
+  const updated = [newEntry, ...entries].slice(0, 200); // keep max 200
+  try {
+    localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore storage errors
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 type BookingStatus = "Confirmed" | "Pending" | "Cancelled" | "Completed";
 
@@ -525,6 +612,11 @@ function BookingsTab() {
     if (selectedBooking?.id === id) {
       setSelectedBooking((prev) => (prev ? { ...prev, status } : null));
     }
+    const action =
+      status === "Cancelled"
+        ? `Booking ${id} cancelled`
+        : `Booking ${id} confirmed`;
+    addActivityLog(action, "booking");
     toast.success(
       `Booking ${status === "Cancelled" ? "cancelled" : "confirmed"} successfully`,
     );
@@ -891,6 +983,7 @@ function PropertyApprovalsTab() {
       return actor.approveProperty(id);
     },
     onSuccess: (_, id) => {
+      addActivityLog(`Property '${id}' approved`, "property");
       toast.success("Property approved! It is now visible in search results.");
       queryClient.invalidateQueries({ queryKey: ["pendingProperties"] });
       queryClient.invalidateQueries({ queryKey: ["approvedProperties"] });
@@ -908,6 +1001,7 @@ function PropertyApprovalsTab() {
       return actor.rejectProperty(id);
     },
     onSuccess: (_, id) => {
+      addActivityLog(`Property '${id}' rejected`, "property");
       toast.success("Property rejected.");
       setRejectedIds((prev) => new Set([...prev, id]));
       queryClient.invalidateQueries({ queryKey: ["pendingProperties"] });
@@ -1538,6 +1632,7 @@ function UsersTab() {
 
   const handleDisable = (email: string) => {
     disableUser(email);
+    addActivityLog(`User account ${email} disabled`, "user");
     setTick((t) => t + 1);
     if (selected?.email === email)
       setSelected((p) => (p ? { ...p, disabled: true } : p));
@@ -1546,6 +1641,7 @@ function UsersTab() {
 
   const handleEnable = (email: string) => {
     enableUser(email);
+    addActivityLog(`User account ${email} enabled`, "user");
     setTick((t) => t + 1);
     if (selected?.email === email)
       setSelected((p) => (p ? { ...p, disabled: false } : p));
@@ -1554,6 +1650,7 @@ function UsersTab() {
 
   const handleDelete = (email: string) => {
     deleteUser(email);
+    addActivityLog(`User account ${email} deleted`, "user");
     setTick((t) => t + 1);
     setSelected(null);
     toast.success("Account deleted.");
@@ -2413,9 +2510,11 @@ function FeaturedHotelsTab() {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
+        addActivityLog(`Property '${id}' removed from Featured`, "featured");
         toast.success("Removed from Featured Hotels.");
       } else {
         next.add(id);
+        addActivityLog(`Property '${id}' marked as Featured`, "featured");
         toast.success("Marked as Featured! Now visible on homepage.");
       }
       localStorage.setItem(
@@ -2608,6 +2707,182 @@ function FeaturedHotelsTab() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ActivityLogTab() {
+  const [logs, setLogs] = useState<ActivityLogEntry[]>(() => getActivityLog());
+  const [filter, setFilter] = useState<"all" | ActivityLogEntry["category"]>(
+    "all",
+  );
+
+  const refresh = () => setLogs(getActivityLog());
+
+  const getCategoryColor = (category: ActivityLogEntry["category"]) => {
+    switch (category) {
+      case "property":
+        return "bg-blue-100 text-blue-800 border border-blue-200";
+      case "booking":
+        return "bg-green-100 text-green-800 border border-green-200";
+      case "user":
+        return "bg-purple-100 text-purple-800 border border-purple-200";
+      case "featured":
+        return "bg-amber-100 text-amber-800 border border-amber-200";
+    }
+  };
+
+  const getCategoryLabel = (category: ActivityLogEntry["category"]) => {
+    switch (category) {
+      case "property":
+        return "Property";
+      case "booking":
+        return "Booking";
+      case "user":
+        return "User";
+      case "featured":
+        return "Featured";
+    }
+  };
+
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const filtered =
+    filter === "all" ? logs : logs.filter((l) => l.category === filter);
+
+  return (
+    <div className="space-y-6" data-ocid="super_admin.activity_log.section">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <ScrollText className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-black text-foreground text-xl">
+            Activity Log
+          </h2>
+          <Badge className="bg-primary/10 text-primary border-0 font-body text-xs">
+            {filtered.length} entries
+          </Badge>
+        </div>
+        <button
+          type="button"
+          onClick={refresh}
+          data-ocid="super_admin.activity_log.refresh.button"
+          className="flex items-center gap-1.5 text-sm font-body text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-3 py-1.5 hover:bg-muted/50"
+        >
+          <Activity className="w-3.5 h-3.5" />
+          Refresh
+        </button>
+      </div>
+
+      {/* Filter tabs */}
+      <div
+        className="flex gap-2 flex-wrap"
+        data-ocid="super_admin.activity_log.filter.tab"
+      >
+        {(["all", "property", "booking", "user", "featured"] as const).map(
+          (f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full text-xs font-body font-medium transition-colors border ${
+                filter === f
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+              }`}
+            >
+              {f === "all"
+                ? "All Actions"
+                : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ),
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          data-ocid="super_admin.activity_log.empty_state"
+          className="text-center py-16 text-muted-foreground font-body"
+        >
+          <ScrollText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No activity recorded yet.</p>
+          <p className="text-xs mt-1">
+            Actions like approving properties or cancelling bookings will appear
+            here.
+          </p>
+        </div>
+      ) : (
+        <Card
+          className="border-border shadow-xs overflow-hidden"
+          data-ocid="super_admin.activity_log.table"
+        >
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="font-body font-semibold text-foreground w-8">
+                    #
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Action
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Category
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Admin
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground whitespace-nowrap">
+                    Date & Time
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((entry, idx) => (
+                  <TableRow
+                    key={entry.id}
+                    className="hover:bg-muted/20 transition-colors"
+                    data-ocid={`super_admin.activity_log.row.${idx + 1}`}
+                  >
+                    <TableCell className="font-body text-muted-foreground text-xs">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell className="font-body text-foreground text-sm py-3">
+                      {entry.action}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`text-[10px] font-body ${getCategoryColor(entry.category)}`}
+                      >
+                        {getCategoryLabel(entry.category)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-body text-sm text-muted-foreground whitespace-nowrap">
+                      {entry.adminName}
+                    </TableCell>
+                    <TableCell className="font-body text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDateTime(entry.timestamp)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
+      <p className="text-xs font-body text-muted-foreground/60 text-center">
+        Activity logs are read-only. Showing latest {filtered.length} entries.
+      </p>
     </div>
   );
 }
@@ -2890,6 +3165,12 @@ export default function SuperAdmin() {
             <TabsTrigger value="featured" data-ocid="super_admin.featured.tab">
               Featured Hotels
             </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              data-ocid="super_admin.activity_log.tab"
+            >
+              Activity Log
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -2910,6 +3191,9 @@ export default function SuperAdmin() {
 
           <TabsContent value="featured">
             <FeaturedHotelsTab />
+          </TabsContent>
+          <TabsContent value="activity">
+            <ActivityLogTab />
           </TabsContent>
         </Tabs>
       </main>
