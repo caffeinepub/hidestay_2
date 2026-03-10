@@ -1,3 +1,4 @@
+import type { Property } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,17 +10,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
+import { useActor } from "@/hooks/useActor";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Building2,
+  Check,
   Download,
   IndianRupee,
+  Loader2,
   LogOut,
+  MapPin,
   ShieldCheck,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const MOCK_BOOKINGS = [
   {
@@ -91,9 +100,149 @@ const STATS = [
   },
 ];
 
+function PropertyApprovalCard({
+  prop,
+  index,
+  onApprove,
+  onReject,
+  approving,
+  rejecting,
+}: {
+  prop: Property;
+  index: number;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  approving: boolean;
+  rejecting: boolean;
+}) {
+  return (
+    <Card
+      data-ocid={`super_admin.pending.item.${index + 1}`}
+      className="border-border shadow-xs"
+    >
+      <CardContent className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          {prop.imageUrls.length > 0 ? (
+            <img
+              src={prop.imageUrls[0]}
+              alt={prop.propertyName}
+              className="w-full sm:w-24 h-28 sm:h-20 rounded-xl object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-full sm:w-24 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-7 h-7 text-primary" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="font-display font-bold text-foreground">
+                  {prop.propertyName}
+                </h3>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground font-body">
+                  <MapPin className="w-3 h-3" />
+                  {prop.city} · {prop.propertyType}
+                </div>
+              </div>
+              <span className="font-display font-bold text-primary">
+                ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}/night
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">
+              {prop.description}
+            </p>
+            <p className="text-xs text-muted-foreground font-body mt-1">
+              Owner: {prop.ownerEmail}
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                disabled={approving || rejecting}
+                onClick={() => onApprove(prop.id)}
+                data-ocid={`super_admin.pending.approve_button.${index + 1}`}
+                className="bg-green-600 hover:bg-green-700 text-white font-body text-xs h-8"
+              >
+                {approving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                )}
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={approving || rejecting}
+                onClick={() => onReject(prop.id)}
+                data-ocid={`super_admin.pending.delete_button.${index + 1}`}
+                className="text-destructive border-destructive/40 hover:bg-destructive hover:text-white font-body text-xs h-8"
+              >
+                {rejecting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <X className="w-3.5 h-3.5 mr-1" />
+                )}
+                Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
+  const { actor } = useActor();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: pendingProperties = [], isLoading: pendingLoading } = useQuery<
+    Property[]
+  >({
+    queryKey: ["pendingProperties"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllPendingProperties();
+    },
+    enabled: !!actor && role === "super_admin",
+  });
+
+  const { data: approvedProperties = [], isLoading: approvedLoading } =
+    useQuery<Property[]>({
+      queryKey: ["approvedProperties"],
+      queryFn: async () => {
+        if (!actor) return [];
+        return actor.getAllApprovedProperties();
+      },
+      enabled: !!actor && role === "super_admin",
+    });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.approveProperty(id);
+    },
+    onSuccess: () => {
+      toast.success("Property approved!");
+      queryClient.invalidateQueries({ queryKey: ["pendingProperties"] });
+      queryClient.invalidateQueries({ queryKey: ["approvedProperties"] });
+    },
+    onError: () => toast.error("Failed to approve property."),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.rejectProperty(id);
+    },
+    onSuccess: () => {
+      toast.success("Property rejected.");
+      queryClient.invalidateQueries({ queryKey: ["pendingProperties"] });
+    },
+    onError: () => toast.error("Failed to reject property."),
+  });
 
   const handleLogout = () => {
     logout();
@@ -134,7 +283,6 @@ export default function SuperAdmin() {
       data-ocid="super_admin.page"
       className="min-h-screen bg-background pb-24"
     >
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-border shadow-xs">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
@@ -196,74 +344,228 @@ export default function SuperAdmin() {
           })}
         </div>
 
-        {/* Bookings Table */}
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-display text-lg text-foreground">
-              Recent Bookings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table data-ocid="super_admin.bookings.table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-body text-xs">
-                      Booking ID
-                    </TableHead>
-                    <TableHead className="font-body text-xs">Guest</TableHead>
-                    <TableHead className="font-body text-xs">Stay</TableHead>
-                    <TableHead className="font-body text-xs">Date</TableHead>
-                    <TableHead className="font-body text-xs">Amount</TableHead>
-                    <TableHead className="font-body text-xs">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {MOCK_BOOKINGS.map((booking, i) => (
-                    <TableRow
-                      key={booking.id}
-                      data-ocid={`super_admin.bookings.row.${i + 1}`}
-                    >
-                      <TableCell className="font-mono text-xs text-primary">
-                        {booking.id}
-                      </TableCell>
-                      <TableCell className="font-body text-sm">
-                        {booking.guest}
-                      </TableCell>
-                      <TableCell className="font-body text-sm">
-                        {booking.stay}
-                      </TableCell>
-                      <TableCell className="font-body text-xs text-muted-foreground">
-                        {booking.date}
-                      </TableCell>
-                      <TableCell className="font-body text-sm font-semibold">
-                        {booking.amount}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            booking.status === "Confirmed"
-                              ? "default"
-                              : booking.status === "Completed"
-                                ? "secondary"
-                                : "outline"
-                          }
-                          className={`text-[10px] font-body ${
-                            booking.status === "Confirmed"
-                              ? "bg-primary text-primary-foreground"
-                              : ""
-                          }`}
+        <Tabs defaultValue="bookings" data-ocid="super_admin.tabs">
+          <TabsList className="mb-6 font-body">
+            <TabsTrigger value="bookings" data-ocid="super_admin.bookings.tab">
+              Bookings
+            </TabsTrigger>
+            <TabsTrigger
+              value="pending"
+              data-ocid="super_admin.pending.tab"
+              className="relative"
+            >
+              Property Approvals
+              {pendingProperties.length > 0 && (
+                <span className="ml-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                  {pendingProperties.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="approved" data-ocid="super_admin.approved.tab">
+              Approved Properties
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bookings">
+            <Card className="border-border shadow-xs">
+              <CardHeader className="pb-2">
+                <CardTitle className="font-display text-lg text-foreground">
+                  Recent Bookings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table data-ocid="super_admin.bookings.table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-body text-xs">
+                          Booking ID
+                        </TableHead>
+                        <TableHead className="font-body text-xs">
+                          Guest
+                        </TableHead>
+                        <TableHead className="font-body text-xs">
+                          Stay
+                        </TableHead>
+                        <TableHead className="font-body text-xs">
+                          Date
+                        </TableHead>
+                        <TableHead className="font-body text-xs">
+                          Amount
+                        </TableHead>
+                        <TableHead className="font-body text-xs">
+                          Status
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {MOCK_BOOKINGS.map((booking, i) => (
+                        <TableRow
+                          key={booking.id}
+                          data-ocid={`super_admin.bookings.row.${i + 1}`}
                         >
-                          {booking.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          <TableCell className="font-mono text-xs text-primary">
+                            {booking.id}
+                          </TableCell>
+                          <TableCell className="font-body text-sm">
+                            {booking.guest}
+                          </TableCell>
+                          <TableCell className="font-body text-sm">
+                            {booking.stay}
+                          </TableCell>
+                          <TableCell className="font-body text-xs text-muted-foreground">
+                            {booking.date}
+                          </TableCell>
+                          <TableCell className="font-body text-sm font-semibold">
+                            {booking.amount}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                booking.status === "Confirmed"
+                                  ? "default"
+                                  : booking.status === "Completed"
+                                    ? "secondary"
+                                    : "outline"
+                              }
+                              className={`text-[10px] font-body ${
+                                booking.status === "Confirmed"
+                                  ? "bg-primary text-primary-foreground"
+                                  : ""
+                              }`}
+                            >
+                              {booking.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pending">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display font-bold text-foreground text-lg">
+                  Pending Properties
+                  {pendingProperties.length > 0 && (
+                    <span className="ml-2 bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-amber-200">
+                      {pendingProperties.length}
+                    </span>
+                  )}
+                </h2>
+              </div>
+              {pendingLoading ? (
+                <div
+                  data-ocid="super_admin.pending.loading_state"
+                  className="flex items-center justify-center py-12"
+                >
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+              ) : pendingProperties.length === 0 ? (
+                <div
+                  data-ocid="super_admin.pending.empty_state"
+                  className="text-center py-12 text-muted-foreground font-body"
+                >
+                  <Check className="w-10 h-10 mx-auto mb-3 text-green-500" />
+                  <p className="font-display font-bold text-foreground">
+                    All caught up!
+                  </p>
+                  <p className="text-sm mt-1">No pending property approvals.</p>
+                </div>
+              ) : (
+                pendingProperties.map((prop, i) => (
+                  <PropertyApprovalCard
+                    key={prop.id}
+                    prop={prop}
+                    index={i}
+                    onApprove={(id) => approveMutation.mutate(id)}
+                    onReject={(id) => rejectMutation.mutate(id)}
+                    approving={
+                      approveMutation.isPending &&
+                      approveMutation.variables === prop.id
+                    }
+                    rejecting={
+                      rejectMutation.isPending &&
+                      rejectMutation.variables === prop.id
+                    }
+                  />
+                ))
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="approved">
+            <div className="space-y-4">
+              <h2 className="font-display font-bold text-foreground text-lg">
+                Approved Properties
+                <span className="ml-2 text-sm font-body text-muted-foreground font-normal">
+                  ({approvedProperties.length})
+                </span>
+              </h2>
+              {approvedLoading ? (
+                <div
+                  data-ocid="super_admin.approved.loading_state"
+                  className="flex items-center justify-center py-12"
+                >
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+              ) : approvedProperties.length === 0 ? (
+                <div
+                  data-ocid="super_admin.approved.empty_state"
+                  className="text-center py-12 text-muted-foreground font-body"
+                >
+                  <Building2 className="w-10 h-10 mx-auto mb-3 text-primary/30" />
+                  <p className="text-sm">No approved properties yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {approvedProperties.map((prop, i) => (
+                    <Card
+                      key={prop.id}
+                      data-ocid={`super_admin.approved.item.${i + 1}`}
+                      className="border-border shadow-xs"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          {prop.imageUrls.length > 0 ? (
+                            <img
+                              src={prop.imageUrls[0]}
+                              alt={prop.propertyName}
+                              className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-7 h-7 text-primary" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h3 className="font-display font-bold text-foreground truncate">
+                              {prop.propertyName}
+                            </h3>
+                            <p className="text-muted-foreground text-xs font-body">
+                              {prop.city} · {prop.propertyType}
+                            </p>
+                            <p className="text-primary font-semibold text-sm font-body mt-1">
+                              ₹
+                              {Number(prop.pricePerNight).toLocaleString(
+                                "en-IN",
+                              )}
+                              /night
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

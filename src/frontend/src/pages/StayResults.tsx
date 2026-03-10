@@ -1,4 +1,7 @@
+import type { Property } from "@/backend";
 import { Button } from "@/components/ui/button";
+import { useActor } from "@/hooks/useActor";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Star } from "lucide-react";
 import { motion } from "motion/react";
@@ -211,12 +214,39 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+function mapPropertyTypeToCategory(type: string): string {
+  const t = type.toLowerCase();
+  if (t.includes("resort")) return "Resorts";
+  if (t.includes("home")) return "Homestays";
+  if (t.includes("guest")) return "Guest Houses";
+  return "Hotels";
+}
+
 export default function StayResults() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/results" });
   const category = search.category ?? "Hotels";
   const destination = search.destination ?? "";
-  const properties = MOCK_PROPERTIES[category] ?? MOCK_PROPERTIES.Hotels;
+
+  const { actor } = useActor();
+  const { data: backendProperties = [] } = useQuery<Property[]>({
+    queryKey: ["approvedProperties"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllApprovedProperties();
+    },
+    enabled: !!actor,
+  });
+
+  const mockProps = MOCK_PROPERTIES[category] ?? MOCK_PROPERTIES.Hotels;
+
+  // Filter backend properties that match the current category
+  const matchingBackendProps = backendProperties.filter(
+    (p) => mapPropertyTypeToCategory(p.propertyType) === category,
+  );
+
+  // Combined count
+  const totalCount = mockProps.length + matchingBackendProps.length;
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -229,7 +259,6 @@ export default function StayResults() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-border shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
           <Button
@@ -252,7 +281,6 @@ export default function StayResults() {
       </header>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
-        {/* Results header */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -260,7 +288,7 @@ export default function StayResults() {
           className="mb-6"
         >
           <h1 className="font-display font-black text-foreground text-3xl sm:text-4xl">
-            {properties.length} stays found
+            {totalCount} stays found
           </h1>
           <p className="text-muted-foreground font-body mt-1">
             {category} in{" "}
@@ -286,8 +314,7 @@ export default function StayResults() {
           </p>
         </motion.div>
 
-        {/* Property grid */}
-        {properties.length === 0 ? (
+        {totalCount === 0 ? (
           <div
             data-ocid="results.empty_state"
             className="text-center py-20 text-muted-foreground font-body"
@@ -296,7 +323,8 @@ export default function StayResults() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {properties.map((prop, i) => (
+            {/* Mock properties */}
+            {mockProps.map((prop, i) => (
               <motion.div
                 key={prop.seed}
                 custom={i}
@@ -351,6 +379,73 @@ export default function StayResults() {
                 </div>
               </motion.div>
             ))}
+
+            {/* Backend approved properties */}
+            {matchingBackendProps.map((prop, i) => {
+              const globalIdx = mockProps.length + i;
+              return (
+                <motion.div
+                  key={prop.id}
+                  custom={globalIdx}
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  data-ocid={`results.property.item.${globalIdx + 1}`}
+                  className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-green hover:-translate-y-1 transition-all duration-300"
+                >
+                  <div className="h-44 overflow-hidden">
+                    {prop.imageUrls.length > 0 ? (
+                      <img
+                        src={prop.imageUrls[0]}
+                        alt={prop.propertyName}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                        <MapPin className="w-8 h-8 text-primary/40" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-display font-bold text-foreground text-base mb-0.5">
+                      {prop.propertyName}
+                    </h3>
+                    <div className="flex items-center gap-1 text-muted-foreground text-xs font-body mb-2">
+                      <MapPin className="w-3 h-3" />
+                      {prop.city}, India
+                    </div>
+                    <StarRating rating={4.5} />
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="font-display font-bold text-primary text-lg">
+                        ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}
+                        /night
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        data-ocid={`results.property.button.${globalIdx + 1}`}
+                        onClick={() =>
+                          navigate({
+                            to: "/details",
+                            search: {
+                              id: prop.id,
+                              category,
+                              name: prop.propertyName,
+                              location: `${prop.city}, India`,
+                              price: `₹${Number(prop.pricePerNight).toLocaleString("en-IN")}/night`,
+                              rating: 4.5,
+                            },
+                          })
+                        }
+                        className="font-body text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </main>

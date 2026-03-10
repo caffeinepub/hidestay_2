@@ -19,39 +19,41 @@
 
 @layer base {
   :root {
-    --background: 0.99 0 0;
-    --foreground: 0.15 0.02 145;
-    --card: 0.99 0 0;
-    --card-foreground: 0.15 0.02 145;
-    --popover: 0.99 0 0;
-    --popover-foreground: 0.15 0.02 145;
-    --primary: 0.52 0.18 145;
-    --primary-foreground: 0.99 0 0;
-    --secondary: 0.93 0.04 145;
-    --secondary-foreground: 0.35 0.12 145;
-    --muted: 0.95 0.02 145;
-    --muted-foreground: 0.55 0.06 145;
-    --accent: 0.88 0.08 145;
-    --accent-foreground: 0.35 0.12 145;
+    /* Forest Green primary (#1F7A4C) ≈ oklch(0.47 0.13 150) */
+    /* Saffron accent (#FF9933) ≈ oklch(0.75 0.18 52) */
+    --background: 1 0 0;
+    --foreground: 0.15 0.04 145;
+    --card: 1 0 0;
+    --card-foreground: 0.15 0.04 145;
+    --popover: 1 0 0;
+    --popover-foreground: 0.15 0.04 145;
+    --primary: 0.47 0.13 150;
+    --primary-foreground: 1 0 0;
+    --secondary: 0.94 0.03 150;
+    --secondary-foreground: 0.35 0.1 150;
+    --muted: 0.96 0.01 150;
+    --muted-foreground: 0.55 0.05 150;
+    --accent: 0.75 0.18 52;
+    --accent-foreground: 0.15 0.04 145;
     --destructive: 0.55 0.22 25;
-    --destructive-foreground: 0.99 0 0;
-    --border: 0.88 0.04 145;
-    --input: 0.88 0.04 145;
-    --ring: 0.52 0.18 145;
+    --destructive-foreground: 1 0 0;
+    --border: 0.9 0.03 150;
+    --input: 0.9 0.03 150;
+    --ring: 0.47 0.13 150;
     --radius: 0.75rem;
-    --chart-1: 0.52 0.18 145;
-    --chart-2: 0.65 0.15 145;
-    --chart-3: 0.4 0.14 145;
-    --chart-4: 0.75 0.12 145;
-    --chart-5: 0.3 0.1 145;
-    --sidebar: 0.97 0.02 145;
-    --sidebar-foreground: 0.15 0.02 145;
-    --sidebar-primary: 0.52 0.18 145;
-    --sidebar-primary-foreground: 0.99 0 0;
-    --sidebar-accent: 0.88 0.08 145;
-    --sidebar-accent-foreground: 0.35 0.12 145;
-    --sidebar-border: 0.88 0.04 145;
-    --sidebar-ring: 0.52 0.18 145;
+    --chart-1: 0.47 0.13 150;
+    --chart-2: 0.6 0.14 150;
+    --chart-3: 0.38 0.11 150;
+    --chart-4: 0.75 0.18 52;
+    --chart-5: 0.65 0.15 52;
+    --sidebar: 0.97 0.02 150;
+    --sidebar-foreground: 0.15 0.04 145;
+    --sidebar-primary: 0.47 0.13 150;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.75 0.18 52;
+    --sidebar-accent-foreground: 0.15 0.04 145;
+    --sidebar-border: 0.9 0.03 150;
+    --sidebar-ring: 0.47 0.13 150;
   }
 }
 
@@ -63,6 +65,26 @@
     @apply bg-background text-foreground;
     font-family: "Outfit", sans-serif;
   }
+}
+
+/* Indian identity utility classes */
+.btn-primary {
+  background-color: #1f7a4c;
+  color: #ffffff;
+  border-radius: 9999px;
+}
+.btn-primary:hover {
+  background-color: #186040;
+}
+
+/* Saffron-green flag gradient banner */
+.india-banner {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 153, 51, 0.35) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(31, 122, 76, 0.45) 100%
+  );
 }
 
 @keyframes progress-bar {

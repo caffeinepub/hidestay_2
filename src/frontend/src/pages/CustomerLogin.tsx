@@ -121,7 +121,15 @@ export default function CustomerLogin() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-5 text-center">
+          <div className="mt-5 flex flex-col gap-2 text-center">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/register" })}
+              data-ocid="customer_login.register.link"
+              className="text-primary text-sm font-body font-medium hover:underline transition-colors"
+            >
+              Don't have an account? Register
+            </button>
             <button
               type="button"
               onClick={() => navigate({ to: "/dashboard" })}

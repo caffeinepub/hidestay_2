@@ -12,10 +12,12 @@ import {
 import BottomNav from "./components/BottomNav";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import CustomerLogin from "./pages/CustomerLogin";
+import CustomerRegister from "./pages/CustomerRegister";
 import Dashboard from "./pages/Dashboard";
 import HelpSupport from "./pages/HelpSupport";
 import HotelAdmin from "./pages/HotelAdmin";
 import HotelOwnerLogin from "./pages/HotelOwnerLogin";
+import HotelOwnerRegister from "./pages/HotelOwnerRegister";
 import ProfilePage from "./pages/ProfilePage";
 import SplashScreen from "./pages/SplashScreen";
 import StayDetails from "./pages/StayDetails";
@@ -30,6 +32,8 @@ const LOGIN_PATHS = [
   "/login/customer",
   "/login/hotel-owner",
   "/login/super-admin",
+  "/register",
+  "/register/hotel-owner",
 ];
 
 function RootLayout() {
@@ -158,6 +162,18 @@ const superAdminLoginRoute = createRoute({
   component: SuperAdminLogin,
 });
 
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register",
+  component: CustomerRegister,
+});
+
+const hotelOwnerRegisterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register/hotel-owner",
+  component: HotelOwnerRegister,
+});
+
 const routeTree = rootRoute.addChildren([
   splashRoute,
   dashboardRoute,
@@ -172,6 +188,8 @@ const routeTree = rootRoute.addChildren([
   customerLoginRoute,
   hotelOwnerLoginRoute,
   superAdminLoginRoute,
+  registerRoute,
+  hotelOwnerRegisterRoute,
 ]);
 
 const router = createRouter({ routeTree });

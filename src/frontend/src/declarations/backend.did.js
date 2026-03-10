@@ -8,6 +8,17 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  'method' : IDL.Text,
+  'blob_hash' : IDL.Text,
+});
+export const _CaffeineStorageRefillInformation = IDL.Record({
+  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+});
+export const _CaffeineStorageRefillResult = IDL.Record({
+  'success' : IDL.Opt(IDL.Bool),
+  'topped_up_amount' : IDL.Opt(IDL.Nat),
+});
 export const Booking = IDL.Record({
   'id' : IDL.Text,
   'checkin' : IDL.Text,
@@ -20,13 +31,71 @@ export const Booking = IDL.Record({
   'guests' : IDL.Nat,
   'location' : IDL.Text,
 });
+export const Property = IDL.Record({
+  'id' : IDL.Text,
+  'ownerEmail' : IDL.Text,
+  'status' : IDL.Text,
+  'propertyName' : IDL.Text,
+  'propertyType' : IDL.Text,
+  'imageUrls' : IDL.Vec(IDL.Text),
+  'checkinTime' : IDL.Text,
+  'city' : IDL.Text,
+  'pricePerNight' : IDL.Nat,
+  'description' : IDL.Text,
+  'amenities' : IDL.Vec(IDL.Text),
+  'address' : IDL.Text,
+  'rules' : IDL.Text,
+  'checkoutTime' : IDL.Text,
+  'contactPhone' : IDL.Text,
+});
 export const Category = IDL.Record({
   'name' : IDL.Text,
   'description' : IDL.Text,
 });
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const GalleryImage = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'blob' : ExternalBlob,
+  'description' : IDL.Text,
+  'timestamp' : IDL.Int,
+});
+export const HotelOwner = IDL.Record({
+  'password' : IDL.Text,
+  'name' : IDL.Text,
+  'email' : IDL.Text,
+  'phone' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
+  '_caffeineStorageBlobIsLive' : IDL.Func(
+      [IDL.Vec(IDL.Nat8)],
+      [IDL.Bool],
+      ['query'],
+    ),
+  '_caffeineStorageBlobsToDelete' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [],
+      [],
+    ),
+  '_caffeineStorageCreateCertificate' : IDL.Func(
+      [IDL.Text],
+      [_CaffeineStorageCreateCertificateResult],
+      [],
+    ),
+  '_caffeineStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_CaffeineStorageRefillInformation)],
+      [_CaffeineStorageRefillResult],
+      [],
+    ),
+  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'approveProperty' : IDL.Func([IDL.Text], [], []),
   'createBooking' : IDL.Func(
       [
         IDL.Text,
@@ -42,15 +111,63 @@ export const idlService = IDL.Service({
       [],
     ),
   'deleteCategory' : IDL.Func([IDL.Text], [], []),
+  'deleteImage' : IDL.Func([IDL.Nat], [], []),
+  'getAllApprovedProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
   'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
   'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+  'getAllImages' : IDL.Func([], [IDL.Vec(GalleryImage)], ['query']),
+  'getAllPendingProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
   'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
   'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
+  'getImage' : IDL.Func([IDL.Nat], [GalleryImage], ['query']),
+  'getMyProperties' : IDL.Func([IDL.Text], [IDL.Vec(Property)], ['query']),
+  'loginOwner' : IDL.Func([IDL.Text, IDL.Text], [HotelOwner], []),
+  'registerOwner' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [HotelOwner],
+      [],
+    ),
+  'rejectProperty' : IDL.Func([IDL.Text], [], []),
+  'submitProperty' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Vec(IDL.Text),
+        IDL.Nat,
+        IDL.Vec(IDL.Text),
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+      ],
+      [Property],
+      [],
+    ),
+  'uploadImage' : IDL.Func(
+      [IDL.Text, IDL.Text, ExternalBlob],
+      [GalleryImage],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
+  const _CaffeineStorageRefillInformation = IDL.Record({
+    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  });
+  const _CaffeineStorageRefillResult = IDL.Record({
+    'success' : IDL.Opt(IDL.Bool),
+    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  });
   const Booking = IDL.Record({
     'id' : IDL.Text,
     'checkin' : IDL.Text,
@@ -63,10 +180,68 @@ export const idlFactory = ({ IDL }) => {
     'guests' : IDL.Nat,
     'location' : IDL.Text,
   });
+  const Property = IDL.Record({
+    'id' : IDL.Text,
+    'ownerEmail' : IDL.Text,
+    'status' : IDL.Text,
+    'propertyName' : IDL.Text,
+    'propertyType' : IDL.Text,
+    'imageUrls' : IDL.Vec(IDL.Text),
+    'checkinTime' : IDL.Text,
+    'city' : IDL.Text,
+    'pricePerNight' : IDL.Nat,
+    'description' : IDL.Text,
+    'amenities' : IDL.Vec(IDL.Text),
+    'address' : IDL.Text,
+    'rules' : IDL.Text,
+    'checkoutTime' : IDL.Text,
+    'contactPhone' : IDL.Text,
+  });
   const Category = IDL.Record({ 'name' : IDL.Text, 'description' : IDL.Text });
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const GalleryImage = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'blob' : ExternalBlob,
+    'description' : IDL.Text,
+    'timestamp' : IDL.Int,
+  });
+  const HotelOwner = IDL.Record({
+    'password' : IDL.Text,
+    'name' : IDL.Text,
+    'email' : IDL.Text,
+    'phone' : IDL.Text,
+  });
   
   return IDL.Service({
+    '_caffeineStorageBlobIsLive' : IDL.Func(
+        [IDL.Vec(IDL.Nat8)],
+        [IDL.Bool],
+        ['query'],
+      ),
+    '_caffeineStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_caffeineStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [_CaffeineStorageCreateCertificateResult],
+        [],
+      ),
+    '_caffeineStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_CaffeineStorageRefillInformation)],
+        [_CaffeineStorageRefillResult],
+        [],
+      ),
+    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'approveProperty' : IDL.Func([IDL.Text], [], []),
     'createBooking' : IDL.Func(
         [
           IDL.Text,
@@ -82,10 +257,47 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'deleteCategory' : IDL.Func([IDL.Text], [], []),
+    'deleteImage' : IDL.Func([IDL.Nat], [], []),
+    'getAllApprovedProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
     'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
     'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+    'getAllImages' : IDL.Func([], [IDL.Vec(GalleryImage)], ['query']),
+    'getAllPendingProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
     'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
     'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
+    'getImage' : IDL.Func([IDL.Nat], [GalleryImage], ['query']),
+    'getMyProperties' : IDL.Func([IDL.Text], [IDL.Vec(Property)], ['query']),
+    'loginOwner' : IDL.Func([IDL.Text, IDL.Text], [HotelOwner], []),
+    'registerOwner' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [HotelOwner],
+        [],
+      ),
+    'rejectProperty' : IDL.Func([IDL.Text], [], []),
+    'submitProperty' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Vec(IDL.Text),
+          IDL.Nat,
+          IDL.Vec(IDL.Text),
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+        ],
+        [Property],
+        [],
+      ),
+    'uploadImage' : IDL.Func(
+        [IDL.Text, IDL.Text, ExternalBlob],
+        [GalleryImage],
+        [],
+      ),
   });
 };
 

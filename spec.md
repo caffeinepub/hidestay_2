@@ -1,39 +1,29 @@
 # HIDESTAY
 
 ## Current State
-- Bottom nav with 5 tabs: Home, Hotel Admin, Super Admin, Profile, Help
-- HotelAdmin page: password-only login (hardcoded "hotel123")
-- SuperAdmin page: password-only login (hardcoded "admin123")
-- ProfilePage: static guest profile, no login
-- Booking system works, saves to backend
-- No shared auth context across the app
+The app uses a generic purple-toned OKLCH color palette (hue 145 area). Buttons, primary colors, and accents are all purple-based. The dashboard has a mountain hero image with a dark overlay. The footer shows only a caffeine.ai credit. The splash screen uses the same mountain background.
 
 ## Requested Changes (Diff)
 
 ### Add
-- AuthContext (React context) managing login state for three roles: customer, hotel_owner, super_admin
-- CustomerLogin page: email/phone + password fields, self-register flow (any credentials accepted for demo), navigates to Profile/dashboard after login
-- HotelOwnerLogin page: email/phone + password fields, hardcoded credential (owner@hidestay.com / hotel123), navigates to Hotel Admin dashboard
-- SuperAdminLogin page: email/phone + password fields, hardcoded credential (admin@hidestay.com / admin123), navigates to Super Admin panel
-- Route "/login/customer", "/login/hotel-owner", "/login/super-admin"
-- Logout button in HotelAdmin, SuperAdmin, and Profile headers
+- Saffron (#FF9933) accent color replacing the current accent
+- Forest Green (#1F7A4C) as the primary color
+- Indian flag-inspired gradient on the hero/splash: saffron at the top, green at the bottom, white center
+- Footer line: "Discover Hidden Stays in India" in all pages that have a footer
+- New Uttarakhand mountain background image: `/assets/generated/uttarakhand-mountains.dim_1600x600.jpg`
 
 ### Modify
-- HotelAdmin: Remove password-only gate; redirect to /login/hotel-owner if not authenticated as hotel_owner via AuthContext
-- SuperAdmin: Remove password-only gate; redirect to /login/super-admin if not authenticated as super_admin via AuthContext
-- ProfilePage: Show login prompt / redirect to /login/customer if not authenticated as customer; show real user name/email after login
-- BottomNav: No visual change needed; auth redirects handled at page level
-- App.tsx: Wrap app in AuthProvider, add three login routes
+- `index.css`: Update OKLCH color tokens — primary to Forest Green, accent to Saffron, background to white
+- All buttons app-wide: rounded, Forest Green background, white text
+- Dashboard hero: use new mountain image, add saffron-to-transparent gradient at top and green-to-transparent gradient at bottom
+- Splash screen: use new mountain image, apply saffron gradient overlay at top and green gradient at bottom
+- Dashboard footer: add "Discover Hidden Stays in India" tagline
 
 ### Remove
-- Password-only input fields in HotelAdmin and SuperAdmin
+- Purple/violet hue-based color tokens from CSS variables
 
 ## Implementation Plan
-1. Create AuthContext.tsx with login/logout functions and role-based state
-2. Create CustomerLogin.tsx page (email/phone + password, any credentials accepted)
-3. Create HotelOwnerLogin.tsx page (email/phone + password, validates against hardcoded owner credentials)
-4. Create SuperAdminLogin.tsx page (email/phone + password, validates against hardcoded admin credentials)
-5. Update HotelAdmin.tsx to use AuthContext, redirect to login if not authed
-6. Update SuperAdmin.tsx to use AuthContext, redirect to login if not authed
-7. Update ProfilePage.tsx to use AuthContext, show login prompt if not authed
-8. Update App.tsx to add AuthProvider and new login routes
+1. Update `index.css` OKLCH tokens for primary (Forest Green), accent (Saffron), and keep background white
+2. Update Dashboard.tsx: swap mountain image to new one, add Indian flag gradient overlay (saffron top + green bottom), update footer with India tagline, update button colors
+3. Update SplashScreen.tsx: swap mountain image, add saffron/green gradient overlays
+4. Audit other pages (login, search, results, details, etc.) to apply green buttons and saffron accents consistently

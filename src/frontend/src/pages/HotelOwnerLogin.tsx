@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { useActor } from "@/hooks/useActor";
 import { useNavigate } from "@tanstack/react-router";
 import { Building2, Lock } from "lucide-react";
 import { useState } from "react";
 
 export default function HotelOwnerLogin() {
-  const { loginHotelOwner } = useAuth();
+  const { loginHotelOwner, loginHotelOwnerWithData } = useAuth();
+  const { actor } = useActor();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,22 +21,44 @@ export default function HotelOwnerLogin() {
     e.preventDefault();
     setError("");
     if (!email.trim() || !password.trim()) {
-      setError("Please enter your email/phone and password.");
+      setError("Please enter your email and password.");
       return;
     }
     setLoading(true);
+
+    // Try hardcoded fallback first
+    if (email === "owner@hidestay.com" && password === "hotel123") {
+      await loginHotelOwner(email, password);
+      navigate({ to: "/hotel-admin" });
+      setLoading(false);
+      return;
+    }
+
+    // Try backend
+    try {
+      if (actor) {
+        const owner = await actor.loginOwner(email, password);
+        loginHotelOwnerWithData(owner);
+        navigate({ to: "/hotel-admin" });
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // fall through to error
+    }
+
+    // Also try local fallback
     const ok = await loginHotelOwner(email, password);
-    setLoading(false);
     if (ok) {
       navigate({ to: "/hotel-admin" });
     } else {
-      setError("Invalid credentials. Use owner@hidestay.com / hotel123");
+      setError("Invalid credentials. Please check your email and password.");
     }
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary to-background flex flex-col items-center justify-center px-4 py-8">
-      {/* Branding */}
       <div className="mb-8 text-center">
         <h1 className="font-display font-black text-3xl text-primary tracking-tight">
           HIDESTAY
@@ -63,7 +87,7 @@ export default function HotelOwnerLogin() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="font-body text-sm font-medium">
-                Email or Phone Number
+                Email
               </Label>
               <Input
                 id="email"
@@ -118,7 +142,22 @@ export default function HotelOwnerLogin() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-5 text-center">
+
+          <div className="mt-4 text-center">
+            <p className="text-sm font-body text-muted-foreground">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/register/hotel-owner" })}
+                data-ocid="hotel_owner_login.register.link"
+                className="text-primary font-semibold hover:underline"
+              >
+                Register as Hotel Owner
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-3 text-center">
             <button
               type="button"
               onClick={() => navigate({ to: "/dashboard" })}

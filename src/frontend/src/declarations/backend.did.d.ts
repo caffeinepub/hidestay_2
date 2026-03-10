@@ -23,17 +23,103 @@ export interface Booking {
   'location' : string,
 }
 export interface Category { 'name' : string, 'description' : string }
+export type ExternalBlob = Uint8Array;
+export interface GalleryImage {
+  'id' : bigint,
+  'title' : string,
+  'blob' : ExternalBlob,
+  'description' : string,
+  'timestamp' : bigint,
+}
+export interface HotelOwner {
+  'password' : string,
+  'name' : string,
+  'email' : string,
+  'phone' : string,
+}
+export interface Property {
+  'id' : string,
+  'ownerEmail' : string,
+  'status' : string,
+  'propertyName' : string,
+  'propertyType' : string,
+  'imageUrls' : Array<string>,
+  'checkinTime' : string,
+  'city' : string,
+  'pricePerNight' : bigint,
+  'description' : string,
+  'amenities' : Array<string>,
+  'address' : string,
+  'rules' : string,
+  'checkoutTime' : string,
+  'contactPhone' : string,
+}
+export interface _CaffeineStorageCreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
+export interface _CaffeineStorageRefillInformation {
+  'proposed_top_up_amount' : [] | [bigint],
+}
+export interface _CaffeineStorageRefillResult {
+  'success' : [] | [boolean],
+  'topped_up_amount' : [] | [bigint],
+}
 export interface _SERVICE {
+  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
+  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array>],
+    undefined
+  >,
+  '_caffeineStorageCreateCertificate' : ActorMethod<
+    [string],
+    _CaffeineStorageCreateCertificateResult
+  >,
+  '_caffeineStorageRefillCashier' : ActorMethod<
+    [[] | [_CaffeineStorageRefillInformation]],
+    _CaffeineStorageRefillResult
+  >,
+  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   'addCategory' : ActorMethod<[string, string], undefined>,
+  'approveProperty' : ActorMethod<[string], undefined>,
   'createBooking' : ActorMethod<
     [string, string, string, string, string, string, string, bigint],
     Booking
   >,
   'deleteCategory' : ActorMethod<[string], undefined>,
+  'deleteImage' : ActorMethod<[bigint], undefined>,
+  'getAllApprovedProperties' : ActorMethod<[], Array<Property>>,
   'getAllBookings' : ActorMethod<[], Array<Booking>>,
   'getAllCategories' : ActorMethod<[], Array<Category>>,
+  'getAllImages' : ActorMethod<[], Array<GalleryImage>>,
+  'getAllPendingProperties' : ActorMethod<[], Array<Property>>,
   'getBooking' : ActorMethod<[string], Booking>,
   'getCategory' : ActorMethod<[string], Category>,
+  'getImage' : ActorMethod<[bigint], GalleryImage>,
+  'getMyProperties' : ActorMethod<[string], Array<Property>>,
+  'loginOwner' : ActorMethod<[string, string], HotelOwner>,
+  'registerOwner' : ActorMethod<[string, string, string, string], HotelOwner>,
+  'rejectProperty' : ActorMethod<[string], undefined>,
+  'submitProperty' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      Array<string>,
+      bigint,
+      Array<string>,
+      string,
+      string,
+      string,
+      string,
+    ],
+    Property
+  >,
+  'uploadImage' : ActorMethod<[string, string, ExternalBlob], GalleryImage>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

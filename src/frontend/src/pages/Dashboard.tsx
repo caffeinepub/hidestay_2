@@ -77,17 +77,21 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Hero Banner */}
+      {/* Hero Banner — Uttarakhand Mountains with Indian flag gradient */}
       <section
         className="relative h-64 sm:h-80 w-full overflow-hidden"
         style={{
           backgroundImage:
-            "url('/assets/generated/mountain-bg.dim_1200x800.jpg')",
+            "url('/assets/generated/uttarakhand-mountains.dim_1600x600.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center 40%",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/25 to-background" />
+        {/* Saffron top gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#FF9933]/40 via-white/5 to-[#1F7A4C]/50" />
+        {/* Light text-readability overlay */}
+        <div className="absolute inset-0 bg-black/20" />
+
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 gap-3">
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
@@ -101,9 +105,17 @@ export default function Dashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35, duration: 0.7 }}
-            className="text-white/85 font-body text-sm sm:text-lg tracking-wide max-w-md"
+            className="text-white/90 font-body text-sm sm:text-lg tracking-wide max-w-md drop-shadow"
           >
             Handpicked stays off the beaten path
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.7 }}
+            className="text-[#FF9933] font-body text-xs sm:text-sm font-semibold tracking-widest uppercase drop-shadow"
+          >
+            🇮🇳 Discover Hidden Stays in India
           </motion.p>
         </div>
       </section>
@@ -133,7 +145,7 @@ export default function Dashboard() {
                 variants={cardVariants}
                 data-ocid={cat.ocid}
                 onClick={() => handleExplore(cat.name)}
-                className="group cursor-pointer rounded-2xl overflow-hidden border border-border bg-card shadow-xs hover:shadow-green hover:-translate-y-1.5 transition-all duration-300"
+                className="group cursor-pointer rounded-2xl overflow-hidden border border-border bg-card shadow-xs hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300"
               >
                 {/* Image */}
                 <div className="relative h-36 sm:h-48 overflow-hidden">
@@ -159,7 +171,7 @@ export default function Dashboard() {
                   </p>
                   <Button
                     size="sm"
-                    className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90 font-body font-semibold text-sm"
+                    className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90 font-body font-semibold text-sm rounded-full"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleExplore(cat.name);
@@ -176,16 +188,21 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="border-t border-border mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-muted-foreground text-sm font-body">
-          © {new Date().getFullYear()}.{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary transition-colors"
-          >
-            Built with ❤️ using caffeine.ai
-          </a>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center">
+          <p className="text-primary font-semibold tracking-wider text-sm font-body mb-2">
+            🇮🇳 Discover Hidden Stays in India
+          </p>
+          <p className="text-muted-foreground text-sm font-body">
+            © {new Date().getFullYear()}.{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Built with ❤️ using caffeine.ai
+            </a>
+          </p>
         </div>
       </footer>
     </div>
