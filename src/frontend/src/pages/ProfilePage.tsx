@@ -2,7 +2,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, CheckCircle2, Mail, Search, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  CalendarDays,
+  CheckCircle2,
+  LogOut,
+  Mail,
+  Search,
+  User,
+  UserCircle,
+} from "lucide-react";
 import { useState } from "react";
 
 const MOCK_PAST_BOOKINGS = [
@@ -17,7 +27,7 @@ const MOCK_PAST_BOOKINGS = [
   {
     id: "HIDE-20260115-4432",
     stayName: "Grandma Rosa's Cottage",
-    location: "Tuscany, Italy",
+    location: "Ooty, Tamil Nadu",
     checkin: "2026-01-15",
     checkout: "2026-01-18",
     status: "Completed",
@@ -25,6 +35,8 @@ const MOCK_PAST_BOOKINGS = [
 ];
 
 export default function ProfilePage() {
+  const { role, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [lookupId, setLookupId] = useState("");
   const [searched, setSearched] = useState(false);
 
@@ -32,17 +44,63 @@ export default function ProfilePage() {
     if (lookupId.trim()) setSearched(true);
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/dashboard" });
+  };
+
+  if (role !== "customer") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-24">
+        <Card className="w-full max-w-sm shadow-green border-border text-center">
+          <CardHeader>
+            <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <UserCircle className="w-7 h-7 text-primary" />
+            </div>
+            <CardTitle className="font-display text-xl text-foreground">
+              Sign In to View Profile
+            </CardTitle>
+            <p className="text-muted-foreground text-sm font-body mt-1">
+              Sign in to view your profile and bookings.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              data-ocid="profile.customer_login.button"
+              className="w-full bg-primary text-primary-foreground font-body font-semibold"
+              onClick={() => navigate({ to: "/login/customer" })}
+            >
+              Customer Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div data-ocid="profile.page" className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-border shadow-xs">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <h1 className="font-display font-black text-foreground text-xl">
-            My Profile
-          </h1>
-          <p className="text-muted-foreground text-sm font-body">
-            Manage your bookings and account
-          </p>
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="font-display font-black text-foreground text-xl">
+              My Profile
+            </h1>
+            <p className="text-muted-foreground text-sm font-body">
+              Manage your bookings and account
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            data-ocid="profile.logout.button"
+            className="font-body text-xs flex items-center gap-1.5"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Logout
+          </Button>
         </div>
       </header>
 
@@ -55,17 +113,17 @@ export default function ProfilePage() {
             </div>
             <div>
               <h2 className="font-display font-bold text-foreground text-lg">
-                Guest User
+                {user?.name || "Guest User"}
               </h2>
               <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-body">
                 <Mail className="w-3.5 h-3.5" />
-                guest@hidestay.com
+                {user?.email || "guest@hidestay.com"}
               </div>
               <Badge
                 variant="secondary"
                 className="mt-1.5 text-[10px] font-body"
               >
-                Guest Account
+                Customer Account
               </Badge>
             </div>
           </CardContent>

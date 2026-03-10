@@ -1,8 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -11,15 +9,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Building2,
   Download,
   IndianRupee,
-  Lock,
+  LogOut,
+  ShieldCheck,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { useState } from "react";
 
 const MOCK_BOOKINGS = [
   {
@@ -92,64 +92,36 @@ const STATS = [
 ];
 
 export default function SuperAdmin() {
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const { role, user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (password === "admin123") {
-      setAuthed(true);
-      setError("");
-    } else {
-      setError("Incorrect password. Please try again.");
-    }
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/dashboard" });
   };
 
-  if (!authed) {
+  if (role !== "super_admin") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-24">
-        <Card className="w-full max-w-sm shadow-green border-border">
-          <CardHeader className="text-center">
+        <Card className="w-full max-w-sm shadow-green border-border text-center">
+          <CardHeader>
             <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Lock className="w-7 h-7 text-primary" />
+              <ShieldCheck className="w-7 h-7 text-primary" />
             </div>
             <CardTitle className="font-display text-xl text-foreground">
-              Super Admin Login
+              Super Admin Access Required
             </CardTitle>
             <p className="text-muted-foreground text-sm font-body mt-1">
               Restricted area. Authorised personnel only.
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="admin-password" className="font-body text-sm">
-                Admin Password
-              </Label>
-              <Input
-                id="admin-password"
-                type="password"
-                placeholder="Enter admin password"
-                value={password}
-                data-ocid="super_admin.password.input"
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                className="font-body"
-              />
-            </div>
-            {error && (
-              <p
-                data-ocid="super_admin.login.error_state"
-                className="text-destructive text-xs font-body"
-              >
-                {error}
-              </p>
-            )}
+          <CardContent>
             <Button
+              data-ocid="super_admin.login.button"
               className="w-full bg-primary text-primary-foreground font-body font-semibold"
-              data-ocid="super_admin.login.submit_button"
-              onClick={handleLogin}
+              onClick={() => navigate({ to: "/login/super-admin" })}
             >
-              Access Dashboard
+              Login as Super Admin
             </Button>
           </CardContent>
         </Card>
@@ -170,18 +142,30 @@ export default function SuperAdmin() {
               Super Admin Panel
             </h1>
             <p className="text-muted-foreground text-sm font-body">
-              HIDESTAY Control Centre
+              Welcome, {user?.name || "Admin"}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            data-ocid="super_admin.export.button"
-            className="font-body text-xs flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export Report
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              data-ocid="super_admin.export.button"
+              className="font-body text-xs flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export Report
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              data-ocid="super_admin.logout.button"
+              className="font-body text-xs flex items-center gap-1.5"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 

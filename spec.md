@@ -1,31 +1,39 @@
 # HIDESTAY
 
 ## Current State
-The app has: SplashScreen, Dashboard, StaySearch, StayResults, StayDetails, BookingConfirmation pages. No bottom navigation exists. Each page has its own header and footer.
+- Bottom nav with 5 tabs: Home, Hotel Admin, Super Admin, Profile, Help
+- HotelAdmin page: password-only login (hardcoded "hotel123")
+- SuperAdmin page: password-only login (hardcoded "admin123")
+- ProfilePage: static guest profile, no login
+- Booking system works, saves to backend
+- No shared auth context across the app
 
 ## Requested Changes (Diff)
 
 ### Add
-- `BottomNav` component: persistent bottom navigation bar with 5 tabs (Home, Hotel Admin, Super Admin, Profile, Help & Support), visible on all main pages (Dashboard, StaySearch, StayResults, StayDetails, BookingConfirmation)
-- `/hotel-admin` route: Hotel Admin dashboard with simple password gate ("hotel123"), showing property management UI with mock properties list
-- `/super-admin` route: Super Admin control panel with simple password gate ("admin123"), showing platform stats and booking overview
-- `/profile` route: Customer profile page with booking history lookup by Booking ID
-- `/help` route: Help & Support page with contact details, company info, FAQs, support options
+- AuthContext (React context) managing login state for three roles: customer, hotel_owner, super_admin
+- CustomerLogin page: email/phone + password fields, self-register flow (any credentials accepted for demo), navigates to Profile/dashboard after login
+- HotelOwnerLogin page: email/phone + password fields, hardcoded credential (owner@hidestay.com / hotel123), navigates to Hotel Admin dashboard
+- SuperAdminLogin page: email/phone + password fields, hardcoded credential (admin@hidestay.com / admin123), navigates to Super Admin panel
+- Route "/login/customer", "/login/hotel-owner", "/login/super-admin"
+- Logout button in HotelAdmin, SuperAdmin, and Profile headers
 
 ### Modify
-- `App.tsx`: Add new routes for hotel-admin, super-admin, profile, help. Wrap main pages in a layout that shows BottomNav.
-- All main pages (Dashboard, StaySearch, StayResults, StayDetails, BookingConfirmation): Add `pb-20` bottom padding to prevent content hiding behind BottomNav. Remove individual footers if redundant.
-- SplashScreen: No bottom nav (splash is transitional).
+- HotelAdmin: Remove password-only gate; redirect to /login/hotel-owner if not authenticated as hotel_owner via AuthContext
+- SuperAdmin: Remove password-only gate; redirect to /login/super-admin if not authenticated as super_admin via AuthContext
+- ProfilePage: Show login prompt / redirect to /login/customer if not authenticated as customer; show real user name/email after login
+- BottomNav: No visual change needed; auth redirects handled at page level
+- App.tsx: Wrap app in AuthProvider, add three login routes
 
 ### Remove
-- Nothing removed, footers can remain or be replaced by bottom nav as appropriate.
+- Password-only input fields in HotelAdmin and SuperAdmin
 
 ## Implementation Plan
-1. Create `BottomNav` component with 5 tabs using lucide icons, active state based on current route, fixed to bottom.
-2. Create layout wrapper `MainLayout` that renders `<Outlet />` + `<BottomNav />`.
-3. Create `HotelAdminPage` with password gate ("hotel123"), property list with add/edit/remove mock actions.
-4. Create `SuperAdminPage` with password gate ("admin123"), platform stats cards, recent bookings table.
-5. Create `ProfilePage` with booking lookup by ID form + static profile section.
-6. Create `HelpSupportPage` with contact info, company info, FAQ accordion, support options.
-7. Update `App.tsx` to use `MainLayout` for main routes, add new routes.
-8. Adjust padding on all main pages so content doesn't hide behind bottom nav.
+1. Create AuthContext.tsx with login/logout functions and role-based state
+2. Create CustomerLogin.tsx page (email/phone + password, any credentials accepted)
+3. Create HotelOwnerLogin.tsx page (email/phone + password, validates against hardcoded owner credentials)
+4. Create SuperAdminLogin.tsx page (email/phone + password, validates against hardcoded admin credentials)
+5. Update HotelAdmin.tsx to use AuthContext, redirect to login if not authed
+6. Update SuperAdmin.tsx to use AuthContext, redirect to login if not authed
+7. Update ProfilePage.tsx to use AuthContext, show login prompt if not authed
+8. Update App.tsx to add AuthProvider and new login routes

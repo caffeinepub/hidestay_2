@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/context/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -10,25 +11,35 @@ import {
 } from "@tanstack/react-router";
 import BottomNav from "./components/BottomNav";
 import BookingConfirmation from "./pages/BookingConfirmation";
+import CustomerLogin from "./pages/CustomerLogin";
 import Dashboard from "./pages/Dashboard";
 import HelpSupport from "./pages/HelpSupport";
 import HotelAdmin from "./pages/HotelAdmin";
+import HotelOwnerLogin from "./pages/HotelOwnerLogin";
 import ProfilePage from "./pages/ProfilePage";
 import SplashScreen from "./pages/SplashScreen";
 import StayDetails from "./pages/StayDetails";
 import StayResults from "./pages/StayResults";
 import StaySearch from "./pages/StaySearch";
 import SuperAdmin from "./pages/SuperAdmin";
+import SuperAdminLogin from "./pages/SuperAdminLogin";
 
 const queryClient = new QueryClient();
+
+const LOGIN_PATHS = [
+  "/login/customer",
+  "/login/hotel-owner",
+  "/login/super-admin",
+];
 
 function RootLayout() {
   const { location } = useRouterState();
   const isSplash = location.pathname === "/";
+  const isLogin = LOGIN_PATHS.includes(location.pathname);
   return (
     <>
       <Outlet />
-      {!isSplash && <BottomNav />}
+      {!isSplash && !isLogin && <BottomNav />}
     </>
   );
 }
@@ -129,6 +140,24 @@ const helpRoute = createRoute({
   component: HelpSupport,
 });
 
+const customerLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/customer",
+  component: CustomerLogin,
+});
+
+const hotelOwnerLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/hotel-owner",
+  component: HotelOwnerLogin,
+});
+
+const superAdminLoginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login/super-admin",
+  component: SuperAdminLogin,
+});
+
 const routeTree = rootRoute.addChildren([
   splashRoute,
   dashboardRoute,
@@ -140,6 +169,9 @@ const routeTree = rootRoute.addChildren([
   superAdminRoute,
   profileRoute,
   helpRoute,
+  customerLoginRoute,
+  hotelOwnerLoginRoute,
+  superAdminLoginRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -153,8 +185,10 @@ declare module "@tanstack/react-router" {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster richColors position="top-center" />
+      <AuthProvider>
+        <RouterProvider router={router} />
+        <Toaster richColors position="top-center" />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -18,7 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Edit, Lock, PlusCircle, ToggleLeft } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "@tanstack/react-router";
+import { Building2, Edit, LogOut, PlusCircle, ToggleLeft } from "lucide-react";
 import { useState } from "react";
 
 const INITIAL_PROPERTIES = [
@@ -49,9 +51,8 @@ const INITIAL_PROPERTIES = [
 ];
 
 export default function HotelAdmin() {
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const { role, user, logout } = useAuth();
+  const navigate = useNavigate();
   const [properties, setProperties] = useState(INITIAL_PROPERTIES);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newProp, setNewProp] = useState({
@@ -61,13 +62,9 @@ export default function HotelAdmin() {
     category: "Hotels",
   });
 
-  const handleLogin = () => {
-    if (password === "hotel123") {
-      setAuthed(true);
-      setError("");
-    } else {
-      setError("Incorrect password. Please try again.");
-    }
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/dashboard" });
   };
 
   const toggleStatus = (id: number) => {
@@ -86,51 +83,28 @@ export default function HotelAdmin() {
     setDialogOpen(false);
   };
 
-  if (!authed) {
+  if (role !== "hotel_owner") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-24">
-        <Card className="w-full max-w-sm shadow-green border-border">
-          <CardHeader className="text-center">
+        <Card className="w-full max-w-sm shadow-green border-border text-center">
+          <CardHeader>
             <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Lock className="w-7 h-7 text-primary" />
+              <Building2 className="w-7 h-7 text-primary" />
             </div>
             <CardTitle className="font-display text-xl text-foreground">
-              Hotel Admin Login
+              Hotel Owner Access Required
             </CardTitle>
             <p className="text-muted-foreground text-sm font-body mt-1">
-              Enter your password to access the hotel owner dashboard.
+              Please log in as a hotel owner to manage your properties.
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="hotel-password" className="font-body text-sm">
-                Password
-              </Label>
-              <Input
-                id="hotel-password"
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                data-ocid="hotel_admin.password.input"
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                className="font-body"
-              />
-            </div>
-            {error && (
-              <p
-                data-ocid="hotel_admin.login.error_state"
-                className="text-destructive text-xs font-body"
-              >
-                {error}
-              </p>
-            )}
+          <CardContent>
             <Button
+              data-ocid="hotel_admin.login.button"
               className="w-full bg-primary text-primary-foreground font-body font-semibold"
-              data-ocid="hotel_admin.login.submit_button"
-              onClick={handleLogin}
+              onClick={() => navigate({ to: "/login/hotel-owner" })}
             >
-              Login
+              Login as Hotel Owner
             </Button>
           </CardContent>
         </Card>
@@ -151,98 +125,112 @@ export default function HotelAdmin() {
               Hotel Admin Dashboard
             </h1>
             <p className="text-muted-foreground text-sm font-body">
-              Welcome, Hotel Owner
+              Welcome, {user?.name || "Hotel Owner"}
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                data-ocid="hotel_admin.add_property.open_modal_button"
-                className="bg-primary text-primary-foreground font-body font-semibold flex items-center gap-1.5"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Add Property
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              data-ocid="hotel_admin.add_property.dialog"
-              className="font-body"
-            >
-              <DialogHeader>
-                <DialogTitle className="font-display">
-                  Add New Property
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-1.5">
-                  <Label>Property Name</Label>
-                  <Input
-                    placeholder="e.g. Sunrise Boutique Hotel"
-                    value={newProp.name}
-                    onChange={(e) =>
-                      setNewProp((p) => ({ ...p, name: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Location</Label>
-                  <Input
-                    placeholder="e.g. Shimla, Himachal Pradesh"
-                    value={newProp.location}
-                    onChange={(e) =>
-                      setNewProp((p) => ({ ...p, location: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Price per Night (₹)</Label>
-                  <Input
-                    placeholder="e.g. ₹2,500"
-                    value={newProp.price}
-                    onChange={(e) =>
-                      setNewProp((p) => ({ ...p, price: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Category</Label>
-                  <Select
-                    value={newProp.category}
-                    onValueChange={(v) =>
-                      setNewProp((p) => ({ ...p, category: v }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Hotels">Hotels</SelectItem>
-                      <SelectItem value="Resorts">Resorts</SelectItem>
-                      <SelectItem value="Homestays">Homestays</SelectItem>
-                      <SelectItem value="Guest Houses">Guest Houses</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
+          <div className="flex items-center gap-2">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
                 <Button
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                  data-ocid="hotel_admin.add_property.cancel_button"
+                  size="sm"
+                  data-ocid="hotel_admin.add_property.open_modal_button"
+                  className="bg-primary text-primary-foreground font-body font-semibold flex items-center gap-1.5"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddProperty}
-                  data-ocid="hotel_admin.add_property.confirm_button"
-                  className="bg-primary text-primary-foreground"
-                >
+                  <PlusCircle className="w-4 h-4" />
                   Add Property
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent
+                data-ocid="hotel_admin.add_property.dialog"
+                className="font-body"
+              >
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    Add New Property
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label>Property Name</Label>
+                    <Input
+                      placeholder="e.g. Sunrise Boutique Hotel"
+                      value={newProp.name}
+                      onChange={(e) =>
+                        setNewProp((p) => ({ ...p, name: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="e.g. Shimla, Himachal Pradesh"
+                      value={newProp.location}
+                      onChange={(e) =>
+                        setNewProp((p) => ({ ...p, location: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Price per Night (₹)</Label>
+                    <Input
+                      placeholder="e.g. ₹2,500"
+                      value={newProp.price}
+                      onChange={(e) =>
+                        setNewProp((p) => ({ ...p, price: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Category</Label>
+                    <Select
+                      value={newProp.category}
+                      onValueChange={(v) =>
+                        setNewProp((p) => ({ ...p, category: v }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Hotels">Hotels</SelectItem>
+                        <SelectItem value="Resorts">Resorts</SelectItem>
+                        <SelectItem value="Homestays">Homestays</SelectItem>
+                        <SelectItem value="Guest Houses">
+                          Guest Houses
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                    data-ocid="hotel_admin.add_property.cancel_button"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddProperty}
+                    data-ocid="hotel_admin.add_property.confirm_button"
+                    className="bg-primary text-primary-foreground"
+                  >
+                    Add Property
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button
+              size="sm"
+              variant="outline"
+              data-ocid="hotel_admin.logout.button"
+              className="font-body text-xs flex items-center gap-1.5"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
