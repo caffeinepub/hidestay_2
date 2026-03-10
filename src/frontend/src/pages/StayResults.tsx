@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Star } from "lucide-react";
 import { motion } from "motion/react";
-import { toast } from "sonner";
 
 const MOCK_PROPERTIES: Record<
   string,
@@ -332,8 +331,16 @@ export default function StayResults() {
                       variant="outline"
                       data-ocid={`results.property.button.${i + 1}`}
                       onClick={() =>
-                        toast("Coming soon!", {
-                          description: `Details for "${prop.name}" will be available soon.`,
+                        navigate({
+                          to: "/details",
+                          search: {
+                            id: prop.seed,
+                            category,
+                            name: prop.name,
+                            location: prop.location,
+                            price: prop.price,
+                            rating: prop.rating,
+                          },
                         })
                       }
                       className="font-body text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"

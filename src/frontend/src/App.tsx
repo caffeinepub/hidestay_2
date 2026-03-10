@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import Dashboard from "./pages/Dashboard";
 import SplashScreen from "./pages/SplashScreen";
+import StayDetails from "./pages/StayDetails";
 import StayResults from "./pages/StayResults";
 import StaySearch from "./pages/StaySearch";
 
@@ -56,11 +57,27 @@ const resultsRoute = createRoute({
     },
 });
 
+const detailsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/details",
+  component: StayDetails,
+  validateSearch: (search) =>
+    search as {
+      id?: string;
+      category?: string;
+      name?: string;
+      location?: string;
+      price?: string;
+      rating?: number;
+    },
+});
+
 const routeTree = rootRoute.addChildren([
   splashRoute,
   dashboardRoute,
   searchRoute,
   resultsRoute,
+  detailsRoute,
 ]);
 
 const router = createRouter({ routeTree });

@@ -1,26 +1,31 @@
 # HIDESTAY
 
 ## Current State
-- Splash screen auto-transitions to Dashboard after 3 seconds.
-- Dashboard shows four category cards (Hotels, Resorts, Homestays, Guest Houses). Clicking any navigates to `/search?category=...`.
-- StaySearch page (`/search`) combines a search filter bar AND property results grid on the same page. Guests/Rooms is not yet a field.
-- App.tsx routes: `/` (Splash), `/dashboard`, `/search`.
+App has SplashScreen, Dashboard, StaySearch, and StayResults pages. The StayResults page shows property cards with a "View Details" button that currently shows a toast saying "Coming soon!". All prices are in INR (₹).
 
 ## Requested Changes (Diff)
 
 ### Add
-- New **StayResults** page at route `/results` that shows the property listings grid. Accepts query params: `category`, `destination`, `checkin`, `checkout`, `adults`, `children`, `rooms`.
-- **Guests & Rooms dropdown** on the search page: a popover/dropdown selector with three counters: Adults, Children, Number of Rooms (each with +/- buttons). Displays a summary string like "2 Adults · 1 Child · 1 Room".
+- New `StayDetails` page at route `/details?id=<seed>&category=<category>`
+- Image gallery with multiple photos (carousel/grid)
+- Stay name, star rating display
+- Location with embedded map (iframe OpenStreetMap)
+- Price per night in ₹
+- Stay description (paragraph)
+- Amenities list: WiFi, Parking, AC, Restaurant, Pool, Gym, Spa, Laundry
+- Rules & Regulations section
+- Check-in time and Check-out time
+- Large "Book Now" CTA button at the bottom
 
 ### Modify
-- **StaySearch page** (`/search`) becomes a dedicated full-screen search form (no results grid). Fields: Destination/City (text input), Check-in date, Check-out date, Guests & Rooms dropdown. Large green "Search Stays" button that navigates to `/results` with all query params.
-- **App.tsx** — add `/results` route for StayResults page.
+- `StayResults.tsx`: "View Details" button navigates to `/details` route instead of showing toast
+- `App.tsx`: Register `/details` route with StayDetails component
 
 ### Remove
-- Property listing grid and mock data from StaySearch page (move to StayResults).
+- Toast "Coming soon!" behavior on View Details button
 
 ## Implementation Plan
-1. Create `StayResults.tsx`: receives search params, displays filtered property cards grid with Back button to search, same visual style as current property grid.
-2. Update `StaySearch.tsx`: replace existing layout with a clean full-screen form — hero banner with category name, form card with Destination, Check-in, Check-out, Guests & Rooms dropdown, and large "Search Stays" CTA.
-3. Implement Guests & Rooms as a Popover with +/- counters for Adults (min 1), Children (min 0), Rooms (min 1).
-4. Update `App.tsx` to register `/results` route.
+1. Create `src/frontend/src/pages/StayDetails.tsx` with all required sections
+2. Add mock detail data (description, amenities, rules, check-in/out, multiple image seeds) keyed by property seed
+3. Register `/details` route in `App.tsx`
+4. Update `StayResults.tsx` View Details button to navigate to `/details`
