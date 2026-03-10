@@ -2887,6 +2887,379 @@ function ActivityLogTab() {
   );
 }
 
+// ── Platform Settings Tab ─────────────────────────────────────────────────────
+
+const SETTINGS_KEY = "hidestay_platform_settings";
+
+interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  supportPhone: string;
+  companyAddress: string;
+  footerText: string;
+  homeTagline: string;
+  featuredSectionTitle: string;
+  exploreSectionTitle: string;
+  logoUrl: string;
+  bannerUrls: string[];
+}
+
+const defaultSettings: PlatformSettings = {
+  platformName: "HIDESTAY",
+  supportEmail: "hidestayindiapvtltd@gmail.com",
+  supportPhone: "+91 98765 43210",
+  companyAddress: "Rishikesh, Uttarakhand, India",
+  footerText: "Discover Hidden Stays in India",
+  homeTagline: "Luxury stays surrounded by nature",
+  featuredSectionTitle: "Top Stays",
+  exploreSectionTitle: "Explore by Category",
+  logoUrl: "",
+  bannerUrls: [],
+};
+
+function loadSettings(): PlatformSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return { ...defaultSettings, ...JSON.parse(raw) };
+  } catch {}
+  return defaultSettings;
+}
+
+function PlatformSettingsTab() {
+  const [settings, setSettings] = useState<PlatformSettings>(loadSettings);
+  const [saved, setSaved] = useState(false);
+  const handleChange = (field: keyof PlatformSettings, value: string) => {
+    setSettings((prev) => ({ ...prev, [field]: value }));
+    setSaved(false);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSettings((prev) => ({ ...prev, logoUrl: reader.result as string }));
+      setSaved(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSettings((prev) => ({
+          ...prev,
+          bannerUrls: [...prev.bannerUrls, reader.result as string],
+        }));
+        setSaved(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeBanner = (idx: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      bannerUrls: prev.bannerUrls.filter((_, i) => i !== idx),
+    }));
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    setSaved(true);
+    toast.success("Platform settings saved successfully.");
+    addActivityLog("Platform settings updated", "user");
+  };
+
+  return (
+    <div className="space-y-8" data-ocid="platform_settings.panel">
+      {/* Platform Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" />
+            Platform Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-name"
+              >
+                Platform Name
+              </Label>
+              <Input
+                id="ps-name"
+                value={settings.platformName}
+                onChange={(e) => handleChange("platformName", e.target.value)}
+                placeholder="HIDESTAY"
+                data-ocid="platform_settings.platform_name.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-email"
+              >
+                Support Email
+              </Label>
+              <Input
+                id="ps-email"
+                type="email"
+                value={settings.supportEmail}
+                onChange={(e) => handleChange("supportEmail", e.target.value)}
+                placeholder="support@hidestay.com"
+                data-ocid="platform_settings.support_email.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-phone"
+              >
+                Support Phone Number
+              </Label>
+              <Input
+                id="ps-phone"
+                value={settings.supportPhone}
+                onChange={(e) => handleChange("supportPhone", e.target.value)}
+                placeholder="+91 98765 43210"
+                data-ocid="platform_settings.support_phone.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-footer"
+              >
+                Website Footer Text
+              </Label>
+              <Input
+                id="ps-footer"
+                value={settings.footerText}
+                onChange={(e) => handleChange("footerText", e.target.value)}
+                placeholder="Discover Hidden Stays in India"
+                data-ocid="platform_settings.footer_text.input"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              className="font-body text-sm font-medium"
+              htmlFor="ps-address"
+            >
+              Company Address
+            </Label>
+            <Textarea
+              id="ps-address"
+              value={settings.companyAddress}
+              onChange={(e) => handleChange("companyAddress", e.target.value)}
+              placeholder="Rishikesh, Uttarakhand, India"
+              rows={2}
+              data-ocid="platform_settings.company_address.textarea"
+            />
+          </div>
+
+          {/* Logo Upload */}
+          <div className="space-y-2">
+            <Label className="font-body text-sm font-medium">
+              Platform Logo
+            </Label>
+            <div className="flex items-center gap-4">
+              {settings.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt="Platform logo"
+                  className="h-14 w-14 rounded-lg object-contain border bg-muted"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-lg border bg-muted flex items-center justify-center text-xs text-muted-foreground font-body">
+                  No logo
+                </div>
+              )}
+              <label
+                htmlFor="ps-logo-upload"
+                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-body hover:bg-primary/90 transition-colors"
+                data-ocid="platform_settings.logo.upload_button"
+              >
+                <Download className="w-4 h-4" />
+                Upload Logo
+                <input
+                  id="ps-logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+              </label>
+              {settings.logoUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="font-body"
+                  onClick={() => {
+                    setSettings((p) => ({ ...p, logoUrl: "" }));
+                    setSaved(false);
+                  }}
+                  data-ocid="platform_settings.logo.delete_button"
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Homepage Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-amber-500" />
+            Homepage Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-tagline"
+              >
+                Homepage Tagline
+              </Label>
+              <Input
+                id="ps-tagline"
+                value={settings.homeTagline}
+                onChange={(e) => handleChange("homeTagline", e.target.value)}
+                placeholder="Luxury stays surrounded by nature"
+                data-ocid="platform_settings.tagline.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-featured-title"
+              >
+                Featured Section Title
+              </Label>
+              <Input
+                id="ps-featured-title"
+                value={settings.featuredSectionTitle}
+                onChange={(e) =>
+                  handleChange("featuredSectionTitle", e.target.value)
+                }
+                placeholder="Top Stays"
+                data-ocid="platform_settings.featured_title.input"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
+                className="font-body text-sm font-medium"
+                htmlFor="ps-explore-title"
+              >
+                Explore Section Title
+              </Label>
+              <Input
+                id="ps-explore-title"
+                value={settings.exploreSectionTitle}
+                onChange={(e) =>
+                  handleChange("exploreSectionTitle", e.target.value)
+                }
+                placeholder="Explore by Category"
+                data-ocid="platform_settings.explore_title.input"
+              />
+            </div>
+          </div>
+
+          {/* Banner Images */}
+          <div className="space-y-3">
+            <Label className="font-body text-sm font-medium">
+              Homepage Banner Images
+            </Label>
+            <label
+              htmlFor="ps-banner-upload"
+              className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md border border-dashed border-primary text-primary text-sm font-body hover:bg-primary/5 transition-colors"
+              data-ocid="platform_settings.banner.upload_button"
+            >
+              <Download className="w-4 h-4" />
+              Upload Banner Images
+              <input
+                id="ps-banner-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleBannerUpload}
+              />
+            </label>
+            {settings.bannerUrls.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                {settings.bannerUrls.map((url, idx) => (
+                  <div
+                    /* biome-ignore lint/suspicious/noArrayIndexKey: banner order is stable */
+                    key={idx}
+                    className="relative rounded-lg overflow-hidden h-28 bg-muted group"
+                    data-ocid={`platform_settings.banner.item.${idx + 1}`}
+                  >
+                    <img
+                      src={url}
+                      alt={`Banner ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeBanner(idx)}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-ocid={`platform_settings.banner.delete_button.${idx + 1}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p
+                className="text-sm text-muted-foreground font-body"
+                data-ocid="platform_settings.banner.empty_state"
+              >
+                No banner images uploaded yet.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={handleSave}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-body px-8"
+          data-ocid="platform_settings.save_button"
+        >
+          Save Settings
+        </Button>
+        {saved && (
+          <span
+            className="flex items-center gap-1 text-sm text-green-600 font-body"
+            data-ocid="platform_settings.success_state"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Settings saved
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -3171,6 +3544,9 @@ export default function SuperAdmin() {
             >
               Activity Log
             </TabsTrigger>
+            <TabsTrigger value="settings" data-ocid="super_admin.settings.tab">
+              Platform Settings
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -3194,6 +3570,9 @@ export default function SuperAdmin() {
           </TabsContent>
           <TabsContent value="activity">
             <ActivityLogTab />
+          </TabsContent>
+          <TabsContent value="settings">
+            <PlatformSettingsTab />
           </TabsContent>
         </Tabs>
       </main>
