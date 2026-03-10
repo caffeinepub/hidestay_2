@@ -102,6 +102,7 @@ const detailsRoute = createRoute({
       location?: string;
       price?: string;
       rating?: number;
+      review?: string;
     },
 });
 

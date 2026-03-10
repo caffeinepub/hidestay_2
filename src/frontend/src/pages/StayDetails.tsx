@@ -1,6 +1,8 @@
 import BookingForm from "@/components/BookingForm";
 import PropertyMap from "@/components/PropertyMap";
+import ReviewsSection from "@/components/ReviewsSection";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -17,7 +19,7 @@ import {
   Wind,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function getDescription(category: string, name: string): string {
   switch (category) {
@@ -74,6 +76,7 @@ function StarRating({ rating }: { rating: number }) {
 export default function StayDetails() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/details" });
+  const { role, user } = useAuth();
 
   const id = search.id ?? "hotel1";
   const category = search.category ?? "Hotels";
@@ -81,6 +84,7 @@ export default function StayDetails() {
   const location = search.location ?? "Rishikesh, Uttarakhand";
   const price = search.price ?? "₹12,000/night";
   const rating = Number(search.rating ?? 4.8);
+  const openReview = (search as Record<string, string>).review === "true";
 
   const images = [
     `https://picsum.photos/seed/${id}a/900/600`,
@@ -91,6 +95,18 @@ export default function StayDetails() {
 
   const [activeImg, setActiveImg] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (openReview) {
+      setReviewFormOpen(true);
+      // Scroll to reviews section after render
+      setTimeout(() => {
+        const el = document.querySelector("[data-ocid='reviews.section']");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 400);
+    }
+  }, [openReview]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -314,6 +330,15 @@ export default function StayDetails() {
             </ul>
           </div>
         </motion.section>
+
+        {/* Guest Reviews */}
+        <ReviewsSection
+          propertyId={id}
+          propertyName={name}
+          isCustomer={role === "customer"}
+          customerName={user?.name || "Guest"}
+          key={reviewFormOpen ? "open" : "closed"}
+        />
       </main>
 
       {/* Sticky Book Now Footer — sits above the bottom nav bar (bottom-16 = 64px) */}

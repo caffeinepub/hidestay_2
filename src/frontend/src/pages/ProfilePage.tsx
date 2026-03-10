@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   LogOut,
   Mail,
+  MessageSquare,
   Search,
   User,
   UserCircle,
@@ -20,6 +21,8 @@ const MOCK_PAST_BOOKINGS = [
     id: "HIDE-20260201-8821",
     stayName: "Mountain Dew Resort",
     location: "Manali, Himachal Pradesh",
+    propertyId: "resort1",
+    category: "Resorts",
     checkin: "2026-02-01",
     checkout: "2026-02-04",
     status: "Completed",
@@ -28,6 +31,8 @@ const MOCK_PAST_BOOKINGS = [
     id: "HIDE-20260115-4432",
     stayName: "Grandma Rosa's Cottage",
     location: "Ooty, Tamil Nadu",
+    propertyId: "homestay1",
+    category: "Homestays",
     checkin: "2026-01-15",
     checkout: "2026-01-18",
     status: "Completed",
@@ -47,6 +52,21 @@ export default function ProfilePage() {
   const handleLogout = () => {
     logout();
     navigate({ to: "/dashboard" });
+  };
+
+  const handleLeaveReview = (booking: (typeof MOCK_PAST_BOOKINGS)[number]) => {
+    navigate({
+      to: "/details",
+      search: {
+        id: booking.propertyId,
+        category: booking.category,
+        name: booking.stayName,
+        location: booking.location,
+        price: "₹8,500/night",
+        rating: 4.5,
+        review: "true",
+      },
+    });
   };
 
   if (role !== "customer") {
@@ -184,7 +204,7 @@ export default function ProfilePage() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-display font-bold text-foreground">
                         {booking.stayName}
                       </h3>
@@ -199,9 +219,23 @@ export default function ProfilePage() {
                         {booking.id}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 text-emerald-600 text-xs font-body font-semibold flex-shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                      {booking.status}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1 text-emerald-600 text-xs font-body font-semibold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        {booking.status}
+                      </div>
+                      {booking.status === "Completed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-ocid={`profile.review.button.${i + 1}`}
+                          onClick={() => handleLeaveReview(booking)}
+                          className="text-[10px] font-body h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/5 flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Leave a Review
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
