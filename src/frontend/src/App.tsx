@@ -25,6 +25,7 @@ import StayResults from "./pages/StayResults";
 import StaySearch from "./pages/StaySearch";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
+import TripPlanner from "./pages/TripPlanner";
 
 const queryClient = new QueryClient();
 
@@ -145,6 +146,12 @@ const helpRoute = createRoute({
   component: HelpSupport,
 });
 
+const tripPlannerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/trip-planner",
+  component: TripPlanner,
+});
+
 const customerLoginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login/customer",
@@ -186,6 +193,7 @@ const routeTree = rootRoute.addChildren([
   superAdminRoute,
   profileRoute,
   helpRoute,
+  tripPlannerRoute,
   customerLoginRoute,
   hotelOwnerLoginRoute,
   superAdminLoginRoute,

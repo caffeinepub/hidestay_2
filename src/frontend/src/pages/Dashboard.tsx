@@ -8,6 +8,7 @@ import {
   MapPin,
   Palmtree,
   Search,
+  Sparkles,
   Star,
 } from "lucide-react";
 import type { Variants } from "motion/react";
@@ -304,6 +305,46 @@ export default function Dashboard() {
           </motion.div>
         </div>
       </section>
+
+      {/* Plan Your Trip Banner */}
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 mt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#1F7A4C] to-[#166038] shadow-lg"
+          data-ocid="dashboard.trip_planner.card"
+        >
+          {/* Decorative circles */}
+          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5" />
+          <div className="absolute -bottom-6 right-16 w-24 h-24 rounded-full bg-[#FF9933]/20" />
+          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
+            <div className="text-center sm:text-left">
+              <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                <Sparkles className="w-5 h-5 text-[#FF9933]" />
+                <span className="text-[#FF9933] text-xs font-bold uppercase tracking-widest">
+                  New Feature
+                </span>
+              </div>
+              <h3 className="text-white font-black text-xl sm:text-2xl leading-tight">
+                Plan Your Perfect Trip
+              </h3>
+              <p className="text-white/70 text-sm mt-1 max-w-sm">
+                Get a personalised day-by-day itinerary with hotel suggestions
+                and attractions tailored to your travel style.
+              </p>
+            </div>
+            <Button
+              data-ocid="dashboard.plan_trip.primary_button"
+              onClick={() => navigate({ to: "/trip-planner" })}
+              className="shrink-0 bg-white text-[#1F7A4C] hover:bg-[#FF9933] hover:text-white font-black rounded-xl px-8 py-3 text-sm shadow-md transition-all"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Plan My Trip
+            </Button>
+          </div>
+        </motion.div>
+      </div>
 
       {/* Category Cards */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-12">
