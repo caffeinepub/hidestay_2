@@ -41,46 +41,114 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-const MOCK_BOOKINGS = [
+type BookingStatus = "Confirmed" | "Pending" | "Cancelled" | "Completed";
+
+interface AdminBooking {
+  id: string;
+  guest: string;
+  guestPhone: string;
+  guestEmail: string;
+  stay: string;
+  stayLocation: string;
+  checkIn: string;
+  checkOut: string;
+  bookingDate: string;
+  guests: number;
+  amount: string;
+  status: BookingStatus;
+  paymentType: string;
+}
+
+const MOCK_BOOKINGS: AdminBooking[] = [
   {
     id: "HIDE-20260301-1421",
     guest: "Priya Sharma",
+    guestPhone: "+91 98765 43210",
+    guestEmail: "priya.sharma@email.com",
     stay: "Mountain Dew Resort",
-    date: "2026-03-01",
+    stayLocation: "Mussoorie, Uttarakhand",
+    checkIn: "2026-03-05",
+    checkOut: "2026-03-08",
+    bookingDate: "2026-03-01",
+    guests: 2,
     amount: "₹13,500",
     status: "Confirmed",
+    paymentType: "Pay at Hotel",
   },
   {
     id: "HIDE-20260303-2834",
     guest: "Rahul Verma",
+    guestPhone: "+91 91234 56789",
+    guestEmail: "rahul.verma@email.com",
     stay: "Green Valley Homestay",
-    date: "2026-03-03",
+    stayLocation: "Rishikesh, Uttarakhand",
+    checkIn: "2026-03-10",
+    checkOut: "2026-03-13",
+    bookingDate: "2026-03-03",
+    guests: 3,
     amount: "₹3,600",
     status: "Confirmed",
+    paymentType: "Pay at Hotel",
   },
   {
     id: "HIDE-20260305-3910",
     guest: "Anjali Patel",
+    guestPhone: "+91 87654 32109",
+    guestEmail: "anjali.patel@email.com",
     stay: "City Hub Hotel",
-    date: "2026-03-05",
+    stayLocation: "Dehradun, Uttarakhand",
+    checkIn: "2026-03-15",
+    checkOut: "2026-03-18",
+    bookingDate: "2026-03-05",
+    guests: 1,
     amount: "₹9,600",
     status: "Pending",
+    paymentType: "Pay at Hotel",
   },
   {
     id: "HIDE-20260307-4512",
     guest: "Vikram Singh",
+    guestPhone: "+91 99887 76655",
+    guestEmail: "vikram.singh@email.com",
     stay: "Azure Bay Resort",
-    date: "2026-03-07",
+    stayLocation: "Nainital, Uttarakhand",
+    checkIn: "2026-03-20",
+    checkOut: "2026-03-25",
+    bookingDate: "2026-03-07",
+    guests: 4,
     amount: "₹63,998",
     status: "Confirmed",
+    paymentType: "Pay at Hotel",
   },
   {
     id: "HIDE-20260309-5671",
     guest: "Meera Nair",
+    guestPhone: "+91 76543 21098",
+    guestEmail: "meera.nair@email.com",
     stay: "Grandma Rosa's Cottage",
-    date: "2026-03-09",
+    stayLocation: "Lansdowne, Uttarakhand",
+    checkIn: "2026-03-01",
+    checkOut: "2026-03-04",
+    bookingDate: "2026-02-25",
+    guests: 2,
     amount: "₹6,299",
     status: "Completed",
+    paymentType: "Pay at Hotel",
+  },
+  {
+    id: "HIDE-20260310-6789",
+    guest: "Arjun Mehta",
+    guestPhone: "+91 82345 67890",
+    guestEmail: "arjun.mehta@email.com",
+    stay: "Himalayan Hideaway",
+    stayLocation: "Chakrata, Uttarakhand",
+    checkIn: "2026-03-22",
+    checkOut: "2026-03-24",
+    bookingDate: "2026-03-10",
+    guests: 2,
+    amount: "₹8,400",
+    status: "Pending",
+    paymentType: "Pay at Hotel",
   },
 ];
 
@@ -379,6 +447,351 @@ function PropertyDetailView({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function BookingsTab() {
+  const [bookings, setBookings] = useState<AdminBooking[]>(MOCK_BOOKINGS);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(
+    null,
+  );
+  const [showHotelModal, setShowHotelModal] = useState(false);
+
+  const updateStatus = (id: string, status: BookingStatus) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status } : b)),
+    );
+    if (selectedBooking?.id === id) {
+      setSelectedBooking((prev) => (prev ? { ...prev, status } : null));
+    }
+    toast.success(
+      `Booking ${status === "Cancelled" ? "cancelled" : "confirmed"} successfully`,
+    );
+  };
+
+  const getStatusColor = (status: BookingStatus) => {
+    switch (status) {
+      case "Confirmed":
+        return "bg-green-100 text-green-800 border border-green-200";
+      case "Pending":
+        return "bg-amber-100 text-amber-800 border border-amber-200";
+      case "Cancelled":
+        return "bg-red-100 text-red-700 border border-red-200";
+      case "Completed":
+        return "bg-blue-100 text-blue-800 border border-blue-200";
+    }
+  };
+
+  if (selectedBooking) {
+    return (
+      <div data-ocid="super_admin.booking_detail.panel" className="space-y-5">
+        <button
+          type="button"
+          onClick={() => setSelectedBooking(null)}
+          data-ocid="super_admin.booking_detail.back.button"
+          className="flex items-center gap-2 text-sm font-body text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Bookings
+        </button>
+
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-black text-foreground text-xl">
+            Booking Details
+          </h2>
+          <Badge
+            className={`text-[11px] font-body ${getStatusColor(selectedBooking.status)}`}
+          >
+            {selectedBooking.status}
+          </Badge>
+        </div>
+
+        <Card className="border-border shadow-xs">
+          <CardContent className="p-5 space-y-5">
+            {/* Booking Info */}
+            <div>
+              <h3 className="font-display font-bold text-foreground text-sm mb-3 flex items-center gap-2">
+                <IndianRupee className="w-4 h-4 text-primary" /> Booking
+                Information
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground font-body">
+                    Booking ID
+                  </p>
+                  <p className="font-mono text-sm text-primary font-semibold">
+                    {selectedBooking.id}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Booking Date
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.bookingDate}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Payment Type
+                  </p>
+                  <p className="font-body text-sm text-foreground font-medium">
+                    {selectedBooking.paymentType}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Check-in
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.checkIn}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Check-out
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.checkOut}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Guests
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.guests} guest
+                    {selectedBooking.guests > 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Total Amount
+                  </p>
+                  <p className="font-body text-sm text-foreground font-semibold text-primary">
+                    {selectedBooking.amount}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border" />
+
+            {/* Guest Info */}
+            <div>
+              <h3 className="font-display font-bold text-foreground text-sm mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" /> Guest Details
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Customer Name
+                  </p>
+                  <p className="font-body text-sm text-foreground font-medium">
+                    {selectedBooking.guest}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Phone Number
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.guestPhone}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Email Address
+                  </p>
+                  <p className="font-body text-sm text-foreground">
+                    {selectedBooking.guestEmail}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border" />
+
+            {/* Hotel Info */}
+            <div>
+              <h3 className="font-display font-bold text-foreground text-sm mb-3 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-primary" /> Hotel Details
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Hotel Name
+                  </p>
+                  <p className="font-body text-sm text-foreground font-medium">
+                    {selectedBooking.stay}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Location
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                    <p className="font-body text-sm text-foreground">
+                      {selectedBooking.stayLocation}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 gap-3 pb-4">
+          {selectedBooking.status !== "Cancelled" && (
+            <Button
+              variant="destructive"
+              className="w-full font-body"
+              data-ocid="super_admin.booking_detail.cancel.button"
+              onClick={() => updateStatus(selectedBooking.id, "Cancelled")}
+            >
+              <X className="w-4 h-4 mr-2" /> Cancel Booking
+            </Button>
+          )}
+          {(selectedBooking.status === "Pending" ||
+            selectedBooking.status === "Cancelled") && (
+            <Button
+              className="w-full bg-primary text-primary-foreground font-body hover:bg-primary/90"
+              data-ocid="super_admin.booking_detail.confirm.button"
+              onClick={() => updateStatus(selectedBooking.id, "Confirmed")}
+            >
+              <Check className="w-4 h-4 mr-2" /> Mark as Confirmed
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="w-full font-body border-primary text-primary"
+            data-ocid="super_admin.booking_detail.view_hotel.button"
+            onClick={() => setShowHotelModal(true)}
+          >
+            <Building2 className="w-4 h-4 mr-2" /> View Hotel Details
+          </Button>
+        </div>
+
+        {/* Hotel Details Modal */}
+        {showHotelModal && (
+          <div
+            className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4"
+            data-ocid="super_admin.hotel_modal.dialog"
+          >
+            <Card className="w-full max-w-md border-border shadow-xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display text-lg">
+                    {selectedBooking.stay}
+                  </CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setShowHotelModal(false)}
+                    data-ocid="super_admin.hotel_modal.close.button"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-5">
+                <div className="flex items-center gap-2 text-sm font-body text-foreground">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span>{selectedBooking.stayLocation}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-body text-muted-foreground">
+                  <Building2 className="w-4 h-4" />
+                  <span>Luxury Stay Property</span>
+                </div>
+                <p className="text-xs font-body text-muted-foreground pt-1">
+                  To view full property details and manage approval status,
+                  visit the Property Approvals tab.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full font-body mt-2"
+                  data-ocid="super_admin.hotel_modal.close_secondary.button"
+                  onClick={() => setShowHotelModal(false)}
+                >
+                  Close
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div data-ocid="super_admin.bookings.panel" className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display font-bold text-foreground text-lg">
+          All Bookings
+        </h2>
+        <Badge variant="outline" className="font-body text-xs">
+          {bookings.length} total
+        </Badge>
+      </div>
+      <Card className="border-border shadow-xs">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table data-ocid="super_admin.bookings.table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-body text-xs">
+                    Booking ID
+                  </TableHead>
+                  <TableHead className="font-body text-xs">Customer</TableHead>
+                  <TableHead className="font-body text-xs">Hotel</TableHead>
+                  <TableHead className="font-body text-xs">Check-in</TableHead>
+                  <TableHead className="font-body text-xs">Check-out</TableHead>
+                  <TableHead className="font-body text-xs">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bookings.map((booking, i) => (
+                  <TableRow
+                    key={booking.id}
+                    data-ocid={`super_admin.bookings.row.${i + 1}`}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setSelectedBooking(booking)}
+                  >
+                    <TableCell className="font-mono text-xs text-primary">
+                      {booking.id}
+                    </TableCell>
+                    <TableCell className="font-body text-sm">
+                      {booking.guest}
+                    </TableCell>
+                    <TableCell className="font-body text-sm">
+                      {booking.stay}
+                    </TableCell>
+                    <TableCell className="font-body text-xs text-muted-foreground">
+                      {booking.checkIn}
+                    </TableCell>
+                    <TableCell className="font-body text-xs text-muted-foreground">
+                      {booking.checkOut}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`text-[10px] font-body ${getStatusColor(booking.status)}`}
+                      >
+                        {booking.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      <p className="text-xs text-muted-foreground font-body text-center">
+        Click any booking row to view details and manage status
+      </p>
     </div>
   );
 }
@@ -1044,83 +1457,7 @@ export default function SuperAdmin() {
           </TabsList>
 
           <TabsContent value="bookings">
-            <Card className="border-border shadow-xs">
-              <CardHeader className="pb-2">
-                <CardTitle className="font-display text-lg text-foreground">
-                  Recent Bookings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table data-ocid="super_admin.bookings.table">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="font-body text-xs">
-                          Booking ID
-                        </TableHead>
-                        <TableHead className="font-body text-xs">
-                          Guest
-                        </TableHead>
-                        <TableHead className="font-body text-xs">
-                          Stay
-                        </TableHead>
-                        <TableHead className="font-body text-xs">
-                          Date
-                        </TableHead>
-                        <TableHead className="font-body text-xs">
-                          Amount
-                        </TableHead>
-                        <TableHead className="font-body text-xs">
-                          Status
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {MOCK_BOOKINGS.map((booking, i) => (
-                        <TableRow
-                          key={booking.id}
-                          data-ocid={`super_admin.bookings.row.${i + 1}`}
-                        >
-                          <TableCell className="font-mono text-xs text-primary">
-                            {booking.id}
-                          </TableCell>
-                          <TableCell className="font-body text-sm">
-                            {booking.guest}
-                          </TableCell>
-                          <TableCell className="font-body text-sm">
-                            {booking.stay}
-                          </TableCell>
-                          <TableCell className="font-body text-xs text-muted-foreground">
-                            {booking.date}
-                          </TableCell>
-                          <TableCell className="font-body text-sm font-semibold">
-                            {booking.amount}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                booking.status === "Confirmed"
-                                  ? "default"
-                                  : booking.status === "Completed"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                              className={`text-[10px] font-body ${
-                                booking.status === "Confirmed"
-                                  ? "bg-primary text-primary-foreground"
-                                  : ""
-                              }`}
-                            >
-                              {booking.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <BookingsTab />
           </TabsContent>
 
           <TabsContent value="approvals">
