@@ -21,18 +21,37 @@ interface RegisteredCustomer {
   password: string;
 }
 
+export interface AdminAccount {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  isRoot?: boolean;
+}
+
 interface AuthContextValue extends AuthState {
   isOwnerLoggedIn: boolean;
   loginCustomer: (emailOrPhone: string, password: string) => Promise<boolean>;
   loginHotelOwner: (email: string, password: string) => Promise<boolean>;
   loginHotelOwnerWithData: (owner: HotelOwner) => void;
-  loginSuperAdmin: (email: string, password: string) => Promise<boolean>;
+  loginSuperAdmin: (emailOrPhone: string, password: string) => Promise<boolean>;
   registerCustomer: (
     name: string,
     email: string,
     phone: string,
     password: string,
   ) => Promise<boolean>;
+  registerAdminAccount: (
+    name: string,
+    email: string,
+    phone: string,
+    password: string,
+  ) => Promise<boolean>;
+  resetAdminPassword: (
+    emailOrPhone: string,
+    newPassword: string,
+  ) => Promise<boolean>;
+  getAdminAccounts: () => AdminAccount[];
   setHotelOwner: (owner: HotelOwner | null) => void;
   logout: () => void;
 }
@@ -41,6 +60,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const STORAGE_KEY = "hidestay_auth";
 const CUSTOMERS_KEY = "hidestay_customers";
+const ADMINS_KEY = "hidestay_admins";
+const ROOT_ADMIN_PASSWORD_KEY = "hidestay_root_admin_password";
+
+const ROOT_ADMIN_EMAIL = "admin@hidestay.com";
+const ROOT_ADMIN_PHONE = "9999000001";
+const DEFAULT_ROOT_PASSWORD = "admin123";
 
 function getRegisteredCustomers(): RegisteredCustomer[] {
   try {
@@ -54,6 +79,24 @@ function getRegisteredCustomers(): RegisteredCustomer[] {
 
 function saveRegisteredCustomers(customers: RegisteredCustomer[]) {
   localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
+}
+
+function getStoredAdmins(): AdminAccount[] {
+  try {
+    const saved = localStorage.getItem(ADMINS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function saveAdminAccounts(admins: AdminAccount[]) {
+  localStorage.setItem(ADMINS_KEY, JSON.stringify(admins));
+}
+
+function getRootAdminPassword(): string {
+  return localStorage.getItem(ROOT_ADMIN_PASSWORD_KEY) || DEFAULT_ROOT_PASSWORD;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -141,13 +184,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginSuperAdmin = async (
-    email: string,
+    emailOrPhone: string,
     password: string,
   ): Promise<boolean> => {
-    if (email === "admin@hidestay.com" && password === "admin123") {
+    // Check root admin
+    const rootPassword = getRootAdminPassword();
+    if (
+      (emailOrPhone === ROOT_ADMIN_EMAIL ||
+        emailOrPhone === ROOT_ADMIN_PHONE) &&
+      password === rootPassword
+    ) {
       setState({
         role: "super_admin",
-        user: { name: "Super Admin", email },
+        user: { name: "Super Admin", email: ROOT_ADMIN_EMAIL },
+        hotelOwner: null,
+      });
+      return true;
+    }
+    // Check stored admins
+    const admins = getStoredAdmins();
+    const match = admins.find(
+      (a) =>
+        (a.email === emailOrPhone || a.phone === emailOrPhone) &&
+        a.password === password,
+    );
+    if (match) {
+      setState({
+        role: "super_admin",
+        user: { name: match.name, email: match.email },
         hotelOwner: null,
       });
       return true;
@@ -172,6 +236,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const registerAdminAccount = async (
+    name: string,
+    email: string,
+    phone: string,
+    password: string,
+  ): Promise<boolean> => {
+    // Check against root admin
+    if (email === ROOT_ADMIN_EMAIL || phone === ROOT_ADMIN_PHONE) return false;
+    const admins = getStoredAdmins();
+    const exists = admins.find((a) => a.email === email || a.phone === phone);
+    if (exists) return false;
+    admins.push({ name, email, phone, password });
+    saveAdminAccounts(admins);
+    return true;
+  };
+
+  const resetAdminPassword = async (
+    emailOrPhone: string,
+    newPassword: string,
+  ): Promise<boolean> => {
+    // Root admin
+    if (
+      emailOrPhone === ROOT_ADMIN_EMAIL ||
+      emailOrPhone === ROOT_ADMIN_PHONE
+    ) {
+      localStorage.setItem(ROOT_ADMIN_PASSWORD_KEY, newPassword);
+      return true;
+    }
+    // Stored admins
+    const admins = getStoredAdmins();
+    const idx = admins.findIndex(
+      (a) => a.email === emailOrPhone || a.phone === emailOrPhone,
+    );
+    if (idx === -1) return false;
+    admins[idx].password = newPassword;
+    saveAdminAccounts(admins);
+    return true;
+  };
+
+  const getAdminAccounts = (): AdminAccount[] => {
+    return getStoredAdmins();
+  };
+
   const logout = () => {
     setState({ role: null, user: null, hotelOwner: null });
   };
@@ -187,6 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginHotelOwnerWithData,
         loginSuperAdmin,
         registerCustomer,
+        registerAdminAccount,
+        resetAdminPassword,
+        getAdminAccounts,
         setHotelOwner,
         logout,
       }}

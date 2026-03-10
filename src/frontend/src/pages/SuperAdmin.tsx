@@ -2,6 +2,8 @@ import type { Property } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -11,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { AdminAccount } from "@/context/AuthContext";
 import { useAuth } from "@/context/AuthContext";
 import { useActor } from "@/hooks/useActor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,13 +24,16 @@ import {
   Download,
   IndianRupee,
   Loader2,
+  Lock,
   LogOut,
   MapPin,
   ShieldCheck,
   TrendingUp,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const MOCK_BOOKINGS = [
@@ -192,6 +198,266 @@ function PropertyApprovalCard({
   );
 }
 
+const ROOT_ADMIN: AdminAccount & { isRoot: true } = {
+  name: "Super Admin",
+  email: "admin@hidestay.com",
+  phone: "9999000001",
+  password: "",
+  isRoot: true,
+};
+
+function AdminAccountsTab() {
+  const { registerAdminAccount, getAdminAccounts } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  // Force re-render after creating account
+  const [, setTick] = useState(0);
+
+  const admins = getAdminAccounts();
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    setSubmitting(true);
+    const ok = await registerAdminAccount(
+      name.trim(),
+      email.trim(),
+      phone.trim(),
+      password,
+    );
+    setSubmitting(false);
+    if (ok) {
+      toast.success("Admin account created.");
+      setName("");
+      setEmail("");
+      setPhone("");
+      setPassword("");
+      setShowForm(false);
+      setTick((t) => t + 1);
+    } else {
+      toast.error("An account with this email or phone already exists.");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display font-bold text-foreground text-lg">
+            Admin Accounts
+          </h2>
+          <p className="text-muted-foreground text-sm font-body">
+            Manage who can access the Super Admin panel.
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowForm((v) => !v)}
+          data-ocid="super_admin.create_admin.open_modal_button"
+          className="bg-primary text-primary-foreground font-body font-semibold flex items-center gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          {showForm ? "Cancel" : "Create New Admin"}
+        </Button>
+      </div>
+
+      {/* Create Form */}
+      {showForm && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-5">
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="admin-name"
+                    className="font-body text-sm font-medium"
+                  >
+                    Name
+                  </Label>
+                  <Input
+                    id="admin-name"
+                    placeholder="Full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    data-ocid="super_admin.create_admin.input"
+                    className="font-body"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="admin-email"
+                    className="font-body text-sm font-medium"
+                  >
+                    Email
+                  </Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    data-ocid="super_admin.create_admin.email.input"
+                    className="font-body"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="admin-phone"
+                    className="font-body text-sm font-medium"
+                  >
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="admin-phone"
+                    placeholder="+91 XXXXXXXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    data-ocid="super_admin.create_admin.phone.input"
+                    className="font-body"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="admin-password"
+                    className="font-body text-sm font-medium"
+                  >
+                    Password
+                  </Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
+                    placeholder="Min. 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    data-ocid="super_admin.create_admin.password.input"
+                    className="font-body"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                  data-ocid="super_admin.create_admin.cancel_button"
+                  className="font-body"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  data-ocid="super_admin.create_admin.submit_button"
+                  className="bg-primary text-primary-foreground font-body font-semibold"
+                >
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <UserPlus className="w-4 h-4 mr-2" />
+                  )}
+                  Create Account
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin Accounts List */}
+      <div className="space-y-3">
+        {/* Root Admin */}
+        <Card
+          data-ocid="super_admin.admins.item.1"
+          className="border-border shadow-xs"
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-bold text-foreground">
+                      {ROOT_ADMIN.name}
+                    </p>
+                    <Badge className="bg-primary text-primary-foreground text-[10px] font-body px-2">
+                      Root Admin
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-xs font-body">
+                    {ROOT_ADMIN.email}
+                  </p>
+                  <p className="text-muted-foreground text-xs font-body">
+                    {ROOT_ADMIN.phone}
+                  </p>
+                </div>
+              </div>
+              <Lock className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stored Admins */}
+        {admins.length === 0 ? (
+          <div
+            data-ocid="super_admin.admins.empty_state"
+            className="text-center py-8 text-muted-foreground font-body"
+          >
+            <Users className="w-10 h-10 mx-auto mb-3 text-primary/30" />
+            <p className="text-sm">
+              No additional admin accounts yet. Create one above.
+            </p>
+          </div>
+        ) : (
+          admins.map((admin, i) => (
+            <Card
+              key={admin.email}
+              data-ocid={`super_admin.admins.item.${i + 2}`}
+              className="border-border shadow-xs"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                      <ShieldCheck className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-display font-bold text-foreground">
+                          {admin.name}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-body px-2 border-primary/30 text-primary"
+                        >
+                          Admin
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground text-xs font-body">
+                        {admin.email}
+                      </p>
+                      <p className="text-muted-foreground text-xs font-body">
+                        {admin.phone}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
   const { actor } = useActor();
@@ -345,7 +611,7 @@ export default function SuperAdmin() {
         </div>
 
         <Tabs defaultValue="bookings" data-ocid="super_admin.tabs">
-          <TabsList className="mb-6 font-body">
+          <TabsList className="mb-6 font-body flex-wrap h-auto">
             <TabsTrigger value="bookings" data-ocid="super_admin.bookings.tab">
               Bookings
             </TabsTrigger>
@@ -363,6 +629,9 @@ export default function SuperAdmin() {
             </TabsTrigger>
             <TabsTrigger value="approved" data-ocid="super_admin.approved.tab">
               Approved Properties
+            </TabsTrigger>
+            <TabsTrigger value="admins" data-ocid="super_admin.admins.tab">
+              Admin Accounts
             </TabsTrigger>
           </TabsList>
 
@@ -564,6 +833,10 @@ export default function SuperAdmin() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="admins">
+            <AdminAccountsTab />
           </TabsContent>
         </Tabs>
       </main>

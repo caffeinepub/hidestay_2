@@ -1,29 +1,28 @@
 # HIDESTAY
 
 ## Current State
-The app uses a generic purple-toned OKLCH color palette (hue 145 area). Buttons, primary colors, and accents are all purple-based. The dashboard has a mountain hero image with a dark overlay. The footer shows only a caffeine.ai credit. The splash screen uses the same mountain background.
+- Super Admin login page has a single form: email/phone + password, hardcoded root credentials (`admin@hidestay.com / admin123`).
+- Super Admin dashboard has Bookings, Property Approvals, and Approved Properties tabs.
+- No way to create additional admin accounts.
+- No forgot/reset password flow.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Saffron (#FF9933) accent color replacing the current accent
-- Forest Green (#1F7A4C) as the primary color
-- Indian flag-inspired gradient on the hero/splash: saffron at the top, green at the bottom, white center
-- Footer line: "Discover Hidden Stays in India" in all pages that have a footer
-- New Uttarakhand mountain background image: `/assets/generated/uttarakhand-mountains.dim_1600x600.jpg`
+- **Forgot Password flow** on login page: a link below the login form reveals a two-step panel — first verify identity (email or phone must match a stored admin account), then set a new password.
+- **Admin Accounts tab** inside the Super Admin dashboard (logged-in admins only): displays all admin accounts and includes a "Create Admin Account" form with Name, Email, Phone, Password fields.
+- `registerAdminAccount` and `resetAdminPassword` functions in AuthContext.
+- Admin accounts stored in localStorage (`hidestay_admins`); root admin is always valid but its password can be reset.
 
 ### Modify
-- `index.css`: Update OKLCH color tokens — primary to Forest Green, accent to Saffron, background to white
-- All buttons app-wide: rounded, Forest Green background, white text
-- Dashboard hero: use new mountain image, add saffron-to-transparent gradient at top and green-to-transparent gradient at bottom
-- Splash screen: use new mountain image, apply saffron gradient overlay at top and green gradient at bottom
-- Dashboard footer: add "Discover Hidden Stays in India" tagline
+- `loginSuperAdmin` in AuthContext to check both root admin and stored admin accounts.
+- `SuperAdminLogin` page to support three views: `login`, `forgot`, `reset`.
+- `SuperAdmin` dashboard to include a new "Admin Accounts" tab.
 
 ### Remove
-- Purple/violet hue-based color tokens from CSS variables
+- Nothing removed.
 
 ## Implementation Plan
-1. Update `index.css` OKLCH tokens for primary (Forest Green), accent (Saffron), and keep background white
-2. Update Dashboard.tsx: swap mountain image to new one, add Indian flag gradient overlay (saffron top + green bottom), update footer with India tagline, update button colors
-3. Update SplashScreen.tsx: swap mountain image, add saffron/green gradient overlays
-4. Audit other pages (login, search, results, details, etc.) to apply green buttons and saffron accents consistently
+1. Update `AuthContext.tsx`: add admin accounts storage, update `loginSuperAdmin`, add `registerAdminAccount` and `resetAdminPassword`.
+2. Update `SuperAdminLogin.tsx`: add Forgot Password link, forgot/reset views.
+3. Update `SuperAdmin.tsx`: add Admin Accounts tab with list and create form.
