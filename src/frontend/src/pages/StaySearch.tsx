@@ -1,217 +1,83 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { ArrowLeft, MapPin, Star } from "lucide-react";
+import { ArrowLeft, MapPin, Minus, Plus, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 
-const MOCK_PROPERTIES: Record<
-  string,
-  Array<{
-    name: string;
-    location: string;
-    price: string;
-    rating: number;
-    seed: string;
-  }>
-> = {
-  Hotels: [
-    {
-      name: "The Grand Meridian",
-      location: "Bali, Indonesia",
-      price: "$145/night",
-      rating: 4.8,
-      seed: "hotel1",
-    },
-    {
-      name: "Blue Horizon Hotel",
-      location: "Santorini, Greece",
-      price: "$220/night",
-      rating: 4.9,
-      seed: "hotel2",
-    },
-    {
-      name: "Forest Edge Boutique",
-      location: "Kyoto, Japan",
-      price: "$180/night",
-      rating: 4.7,
-      seed: "hotel3",
-    },
-    {
-      name: "Sunset Palms Hotel",
-      location: "Maldives",
-      price: "$310/night",
-      rating: 5.0,
-      seed: "hotel4",
-    },
-    {
-      name: "Old Town Residency",
-      location: "Prague, Czech Republic",
-      price: "$95/night",
-      rating: 4.6,
-      seed: "hotel5",
-    },
-    {
-      name: "Mountain View Inn",
-      location: "Swiss Alps, Switzerland",
-      price: "$260/night",
-      rating: 4.8,
-      seed: "hotel6",
-    },
-  ],
-  Resorts: [
-    {
-      name: "Azure Bay Resort",
-      location: "Phuket, Thailand",
-      price: "$380/night",
-      rating: 4.9,
-      seed: "resort1",
-    },
-    {
-      name: "Coral Cove Retreat",
-      location: "Seychelles",
-      price: "$520/night",
-      rating: 5.0,
-      seed: "resort2",
-    },
-    {
-      name: "Jungle Canopy Resort",
-      location: "Costa Rica",
-      price: "$290/night",
-      rating: 4.7,
-      seed: "resort3",
-    },
-    {
-      name: "Desert Bloom Oasis",
-      location: "Marrakech, Morocco",
-      price: "$340/night",
-      rating: 4.8,
-      seed: "resort4",
-    },
-    {
-      name: "Lagoon Paradise",
-      location: "Fiji Islands",
-      price: "$470/night",
-      rating: 4.9,
-      seed: "resort5",
-    },
-    {
-      name: "Peak Summit Resort",
-      location: "Queenstown, NZ",
-      price: "$315/night",
-      rating: 4.6,
-      seed: "resort6",
-    },
-  ],
-  Homestays: [
-    {
-      name: "Grandma Rosa's Cottage",
-      location: "Tuscany, Italy",
-      price: "$75/night",
-      rating: 4.9,
-      seed: "home1",
-    },
-    {
-      name: "Balinese Family Villa",
-      location: "Ubud, Bali",
-      price: "$88/night",
-      rating: 4.8,
-      seed: "home2",
-    },
-    {
-      name: "Highland Croft Stay",
-      location: "Scotland, UK",
-      price: "$65/night",
-      rating: 4.7,
-      seed: "home3",
-    },
-    {
-      name: "Bamboo Garden House",
-      location: "Chiang Mai, Thailand",
-      price: "$55/night",
-      rating: 4.8,
-      seed: "home4",
-    },
-    {
-      name: "Old Town Apartment",
-      location: "Lisbon, Portugal",
-      price: "$92/night",
-      rating: 4.9,
-      seed: "home5",
-    },
-    {
-      name: "Vineyard Farmhouse",
-      location: "Bordeaux, France",
-      price: "$110/night",
-      rating: 4.7,
-      seed: "home6",
-    },
-  ],
-  "Guest Houses": [
-    {
-      name: "Maple Leaf Guest House",
-      location: "Vancouver, Canada",
-      price: "$79/night",
-      rating: 4.7,
-      seed: "guest1",
-    },
-    {
-      name: "Harbor View Lodge",
-      location: "Cape Town, SA",
-      price: "$95/night",
-      rating: 4.8,
-      seed: "guest2",
-    },
-    {
-      name: "The Wanderer's Rest",
-      location: "Kathmandu, Nepal",
-      price: "$45/night",
-      rating: 4.6,
-      seed: "guest3",
-    },
-    {
-      name: "Colonial House Stay",
-      location: "Hanoi, Vietnam",
-      price: "$58/night",
-      rating: 4.7,
-      seed: "guest4",
-    },
-    {
-      name: "Garden Gate House",
-      location: "Dublin, Ireland",
-      price: "$115/night",
-      rating: 4.8,
-      seed: "guest5",
-    },
-    {
-      name: "Lakeside Guest House",
-      location: "Pokhara, Nepal",
-      price: "$52/night",
-      rating: 4.9,
-      seed: "guest6",
-    },
-  ],
+const CATEGORY_HERO: Record<string, { bg: string; label: string }> = {
+  Hotels: {
+    bg: "https://picsum.photos/seed/hotel-hero/1200/400",
+    label: "Find Hotels",
+  },
+  Resorts: {
+    bg: "https://picsum.photos/seed/resort-hero/1200/400",
+    label: "Find Resorts",
+  },
+  Homestays: {
+    bg: "https://picsum.photos/seed/home-hero/1200/400",
+    label: "Find Homestays",
+  },
+  "Guest Houses": {
+    bg: "https://picsum.photos/seed/guesthouse-hero/1200/400",
+    label: "Find Guest Houses",
+  },
 };
 
-const DEFAULT_PROPERTIES = MOCK_PROPERTIES.Hotels;
-
-function StarRating({ rating }: { rating: number }) {
+function Counter({
+  label,
+  sub,
+  value,
+  min,
+  onIncrement,
+  onDecrement,
+  incrementId,
+  decrementId,
+}: {
+  label: string;
+  sub: string;
+  value: number;
+  min: number;
+  onIncrement: () => void;
+  onDecrement: () => void;
+  incrementId: string;
+  decrementId: string;
+}) {
   return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`w-3.5 h-3.5 ${
-            star <= Math.floor(rating)
-              ? "fill-amber-400 text-amber-400"
-              : "text-muted-foreground"
-          }`}
-        />
-      ))}
-      <span className="text-xs text-muted-foreground ml-1 font-body">
-        {rating.toFixed(1)}
-      </span>
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
+      <div>
+        <p className="font-body font-semibold text-foreground text-sm">
+          {label}
+        </p>
+        <p className="font-body text-xs text-muted-foreground">{sub}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          data-ocid={decrementId}
+          onClick={onDecrement}
+          disabled={value <= min}
+          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <Minus className="w-3.5 h-3.5" />
+        </button>
+        <span className="w-5 text-center font-body font-bold text-foreground text-sm">
+          {value}
+        </span>
+        <button
+          type="button"
+          data-ocid={incrementId}
+          onClick={onIncrement}
+          className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -220,192 +86,225 @@ export default function StaySearch() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/search" });
   const category = (search as { category?: string }).category ?? "Hotels";
-  const properties = MOCK_PROPERTIES[category] ?? DEFAULT_PROPERTIES;
+  const hero = CATEGORY_HERO[category] ?? CATEGORY_HERO.Hotels;
 
-  const [location, setLocation] = useState("");
+  const [destination, setDestination] = useState("");
   const [checkin, setCheckin] = useState("");
   const [checkout, setCheckout] = useState("");
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [rooms, setRooms] = useState(1);
+  const [guestsOpen, setGuestsOpen] = useState(false);
+
+  const guestSummary = [
+    `${adults} Adult${adults !== 1 ? "s" : ""}`,
+    children > 0 ? `${children} Child${children !== 1 ? "ren" : ""}` : null,
+    `${rooms} Room${rooms !== 1 ? "s" : ""}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Searching...", {
-      description: `Finding ${category} in ${location || "all destinations"}`,
+    navigate({
+      to: "/results",
+      search: {
+        category,
+        destination,
+        checkin,
+        checkout,
+        adults,
+        children,
+        rooms,
+      },
     });
-  };
-
-  const handleViewDetails = (name: string) => {
-    toast("Coming soon!", {
-      description: `Details for "${name}" will be available soon.`,
-    });
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.45, delay: i * 0.07 },
-    }),
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-border shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
+      {/* Hero area */}
+      <div className="relative h-64 sm:h-80 overflow-hidden">
+        <img
+          src={hero.bg}
+          alt={hero.label}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60" />
+        {/* Header inside hero */}
+        <div className="absolute top-0 left-0 right-0 px-4 sm:px-6 py-4 flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate({ to: "/dashboard" })}
             data-ocid="search.back.button"
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-body"
+            className="text-white hover:text-white hover:bg-white/20 font-body flex items-center gap-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
-          <div className="flex items-center gap-2 flex-1">
-            <MapPin className="w-4 h-4 text-primary" />
-            <span className="font-display font-black text-primary tracking-widest text-lg">
-              HIDESTAY
-            </span>
-          </div>
+          <span className="font-display font-black text-white tracking-widest text-lg">
+            HIDESTAY
+          </span>
         </div>
-      </header>
+        {/* Hero text */}
+        <div className="absolute bottom-6 left-0 right-0 px-4 sm:px-6">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="font-display font-black text-white text-3xl sm:text-4xl drop-shadow-lg"
+          >
+            {hero.label}
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-white/80 font-body text-sm mt-1"
+          >
+            Search and find the perfect {category.toLowerCase()} for your trip
+          </motion.p>
+        </div>
+      </div>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
-        {/* Page Title */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-6"
-        >
-          <h1 className="font-display font-black text-foreground text-3xl sm:text-4xl">
-            Browse {category}
-          </h1>
-          <p className="text-muted-foreground font-body mt-1">
-            Discover the best {category.toLowerCase()} for your next adventure
-          </p>
-        </motion.div>
-
-        {/* Search / Filter Bar */}
+      {/* Form card */}
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 -mt-8 pb-12">
         <motion.form
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
           onSubmit={handleSearch}
-          className="bg-white border border-border rounded-2xl p-4 sm:p-5 mb-8 shadow-xs flex flex-col sm:flex-row gap-3"
+          className="bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.12)] border border-border p-6 sm:p-8 space-y-5"
         >
-          <div className="flex-1">
+          {/* Destination */}
+          <div>
             <label
-              htmlFor="search-location"
+              htmlFor="destination"
               className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
             >
-              Location
+              Destination / City
             </label>
-            <Input
-              id="search-location"
-              placeholder="Where are you going?"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              data-ocid="search.location.input"
-              className="font-body"
-            />
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="destination"
+                data-ocid="search.destination.input"
+                placeholder="Where are you going?"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className="pl-9 font-body"
+              />
+            </div>
           </div>
-          <div className="sm:w-40">
-            <label
-              htmlFor="search-checkin"
-              className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
-            >
-              Check-in
-            </label>
-            <input
-              id="search-checkin"
-              type="date"
-              value={checkin}
-              onChange={(e) => setCheckin(e.target.value)}
-              data-ocid="search.checkin.input"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
-          <div className="sm:w-40">
-            <label
-              htmlFor="search-checkout"
-              className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
-            >
-              Check-out
-            </label>
-            <input
-              id="search-checkout"
-              type="date"
-              value={checkout}
-              onChange={(e) => setCheckout(e.target.value)}
-              data-ocid="search.checkout.input"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
-          <div className="sm:self-end">
-            <Button
-              type="submit"
-              data-ocid="search.submit_button"
-              className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-body font-semibold px-6 h-10"
-            >
-              Search
-            </Button>
-          </div>
-        </motion.form>
 
-        {/* Property Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {properties.map((prop, i) => (
-            <motion.div
-              key={prop.seed}
-              custom={i}
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              data-ocid={`search.property.item.${i + 1}`}
-              className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-green hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="h-44 overflow-hidden">
-                <img
-                  src={`https://picsum.photos/seed/${prop.seed}/400/250`}
-                  alt={prop.name}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+          {/* Dates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="checkin"
+                className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
+              >
+                Check-in
+              </label>
+              <input
+                id="checkin"
+                type="date"
+                data-ocid="search.checkin.input"
+                value={checkin}
+                onChange={(e) => setCheckin(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="checkout"
+                className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block"
+              >
+                Check-out
+              </label>
+              <input
+                id="checkout"
+                type="date"
+                data-ocid="search.checkout.input"
+                value={checkout}
+                onChange={(e) => setCheckout(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+          </div>
+
+          {/* Guests & Rooms */}
+          <div>
+            <p className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+              Guests &amp; Rooms
+            </p>
+            <Popover open={guestsOpen} onOpenChange={setGuestsOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  data-ocid="search.guests_rooms.button"
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-body text-foreground flex items-center gap-2 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors text-left"
+                >
+                  <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="flex-1">{guestSummary}</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
+                <Counter
+                  label="Adults"
+                  sub="Ages 13+"
+                  value={adults}
+                  min={1}
+                  onIncrement={() => setAdults((v) => v + 1)}
+                  onDecrement={() => setAdults((v) => Math.max(1, v - 1))}
+                  incrementId="search.adults.increment.button"
+                  decrementId="search.adults.decrement.button"
                 />
-              </div>
-              <div className="p-4">
-                <h3 className="font-display font-bold text-foreground text-base mb-0.5">
-                  {prop.name}
-                </h3>
-                <div className="flex items-center gap-1 text-muted-foreground text-xs font-body mb-2">
-                  <MapPin className="w-3 h-3" />
-                  {prop.location}
-                </div>
-                <StarRating rating={prop.rating} />
-                <div className="flex items-center justify-between mt-3">
-                  <span className="font-display font-bold text-primary text-lg">
-                    {prop.price}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleViewDetails(prop.name)}
-                    data-ocid={`search.property.button.${i + 1}`}
-                    className="font-body text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                <Counter
+                  label="Children"
+                  sub="Ages 2–12"
+                  value={children}
+                  min={0}
+                  onIncrement={() => setChildren((v) => v + 1)}
+                  onDecrement={() => setChildren((v) => Math.max(0, v - 1))}
+                  incrementId="search.children.increment.button"
+                  decrementId="search.children.decrement.button"
+                />
+                <Counter
+                  label="Rooms"
+                  sub="Number of rooms"
+                  value={rooms}
+                  min={1}
+                  onIncrement={() => setRooms((v) => v + 1)}
+                  onDecrement={() => setRooms((v) => Math.max(1, v - 1))}
+                  incrementId="search.rooms.increment.button"
+                  decrementId="search.rooms.decrement.button"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3 w-full bg-primary text-primary-foreground font-body"
+                  onClick={() => setGuestsOpen(false)}
+                >
+                  Done
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            data-ocid="search.submit_button"
+            className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-body font-bold text-base rounded-xl"
+          >
+            Search Stays
+          </Button>
+        </motion.form>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-muted-foreground text-sm font-body">
+      <footer className="border-t border-border mt-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 text-center text-muted-foreground text-sm font-body">
           © {new Date().getFullYear()}.{" "}
           <a
             href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import Dashboard from "./pages/Dashboard";
 import SplashScreen from "./pages/SplashScreen";
+import StayResults from "./pages/StayResults";
 import StaySearch from "./pages/StaySearch";
 
 const queryClient = new QueryClient();
@@ -33,12 +34,33 @@ const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/search",
   component: StaySearch,
+  validateSearch: (search) =>
+    search as {
+      category?: string;
+    },
+});
+
+const resultsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/results",
+  component: StayResults,
+  validateSearch: (search) =>
+    search as {
+      category?: string;
+      destination?: string;
+      checkin?: string;
+      checkout?: string;
+      adults?: number;
+      children?: number;
+      rooms?: number;
+    },
 });
 
 const routeTree = rootRoute.addChildren([
   splashRoute,
   dashboardRoute,
   searchRoute,
+  resultsRoute,
 ]);
 
 const router = createRouter({ routeTree });
