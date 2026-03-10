@@ -1,3 +1,4 @@
+import BookingForm from "@/components/BookingForm";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
@@ -16,7 +17,6 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 function getDescription(category: string, name: string): string {
   switch (category) {
@@ -89,12 +89,7 @@ export default function StayDetails() {
   ];
 
   const [activeImg, setActiveImg] = useState(0);
-
-  const handleBookNow = () => {
-    toast.success("Booking confirmed! We'll contact you soon.", {
-      duration: 4000,
-    });
-  };
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -339,13 +334,22 @@ export default function StayDetails() {
         <div className="max-w-4xl mx-auto">
           <Button
             data-ocid="details.book_now.primary_button"
-            onClick={handleBookNow}
+            onClick={() => setBookingOpen(true)}
             className="w-full h-14 text-lg font-display font-bold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-md"
           >
             Book Now — {price}
           </Button>
         </div>
       </div>
+
+      {/* Booking Form Sheet */}
+      <BookingForm
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        stayName={name}
+        location={location}
+        price={price}
+      />
     </div>
   );
 }

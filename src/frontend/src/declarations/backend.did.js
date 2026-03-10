@@ -8,6 +8,18 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const Booking = IDL.Record({
+  'id' : IDL.Text,
+  'checkin' : IDL.Text,
+  'stayName' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'guestName' : IDL.Text,
+  'email' : IDL.Text,
+  'checkout' : IDL.Text,
+  'phone' : IDL.Text,
+  'guests' : IDL.Nat,
+  'location' : IDL.Text,
+});
 export const Category = IDL.Record({
   'name' : IDL.Text,
   'description' : IDL.Text,
@@ -15,20 +27,64 @@ export const Category = IDL.Record({
 
 export const idlService = IDL.Service({
   'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'createBooking' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+      ],
+      [Booking],
+      [],
+    ),
   'deleteCategory' : IDL.Func([IDL.Text], [], []),
+  'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
   'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+  'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
   'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const Booking = IDL.Record({
+    'id' : IDL.Text,
+    'checkin' : IDL.Text,
+    'stayName' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'guestName' : IDL.Text,
+    'email' : IDL.Text,
+    'checkout' : IDL.Text,
+    'phone' : IDL.Text,
+    'guests' : IDL.Nat,
+    'location' : IDL.Text,
+  });
   const Category = IDL.Record({ 'name' : IDL.Text, 'description' : IDL.Text });
   
   return IDL.Service({
     'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'createBooking' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+        ],
+        [Booking],
+        [],
+      ),
     'deleteCategory' : IDL.Func([IDL.Text], [], []),
+    'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
     'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
+    'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
     'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
   });
 };

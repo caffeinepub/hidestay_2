@@ -7,6 +7,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
+import BookingConfirmation from "./pages/BookingConfirmation";
 import Dashboard from "./pages/Dashboard";
 import SplashScreen from "./pages/SplashScreen";
 import StayDetails from "./pages/StayDetails";
@@ -72,12 +73,28 @@ const detailsRoute = createRoute({
     },
 });
 
+const confirmationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/confirmation",
+  component: BookingConfirmation,
+  validateSearch: (search) =>
+    search as {
+      bookingId?: string;
+      stayName?: string;
+      location?: string;
+      checkin?: string;
+      checkout?: string;
+      guestName?: string;
+    },
+});
+
 const routeTree = rootRoute.addChildren([
   splashRoute,
   dashboardRoute,
   searchRoute,
   resultsRoute,
   detailsRoute,
+  confirmationRoute,
 ]);
 
 const router = createRouter({ routeTree });

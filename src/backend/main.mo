@@ -1,9 +1,13 @@
 import Runtime "mo:core/Runtime";
 import Order "mo:core/Order";
+import Time "mo:core/Time";
+import List "mo:core/List";
 import Text "mo:core/Text";
 import Map "mo:core/Map";
 import Array "mo:core/Array";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   type Category = {
     name : Text;
@@ -45,5 +49,61 @@ actor {
       Runtime.trap("Category does not exist");
     };
     categories.remove(name);
+  };
+
+  // Booking system
+  type Booking = {
+    id : Text;
+    stayName : Text;
+    location : Text;
+    checkin : Text;
+    checkout : Text;
+    guestName : Text;
+    phone : Text;
+    email : Text;
+    guests : Nat;
+    createdAt : Int;
+  };
+
+  let allBookings = List.empty<Booking>();
+
+  public shared ({ caller }) func createBooking(
+    stayName : Text,
+    location : Text,
+    checkin : Text,
+    checkout : Text,
+    guestName : Text,
+    phone : Text,
+    email : Text,
+    guests : Nat,
+  ) : async Booking {
+    let id = "HIDE-" # stayName # checkin # Time.now().toText();
+
+    let booking : Booking = {
+      id;
+      stayName;
+      location;
+      checkin;
+      checkout;
+      guestName;
+      phone;
+      email;
+      guests;
+      createdAt = Time.now();
+    };
+
+    allBookings.add(booking);
+    booking;
+  };
+
+  public query ({ caller }) func getBooking(id : Text) : async Booking {
+    switch (allBookings.find(func(b) { b.id == id })) {
+      case (null) { Runtime.trap("Booking does not exist") };
+      case (?booking) { booking };
+    };
+  };
+
+  public query ({ caller }) func getAllBookings() : async [Booking] {
+    allBookings.toArray();
   };
 };

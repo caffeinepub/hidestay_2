@@ -89,14 +89,29 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface Booking {
+    id: string;
+    checkin: string;
+    stayName: string;
+    createdAt: bigint;
+    guestName: string;
+    email: string;
+    checkout: string;
+    phone: string;
+    guests: bigint;
+    location: string;
+}
 export interface Category {
     name: string;
     description: string;
 }
 export interface backendInterface {
     addCategory(name: string, description: string): Promise<void>;
+    createBooking(stayName: string, location: string, checkin: string, checkout: string, guestName: string, phone: string, email: string, guests: bigint): Promise<Booking>;
     deleteCategory(name: string): Promise<void>;
+    getAllBookings(): Promise<Array<Booking>>;
     getAllCategories(): Promise<Array<Category>>;
+    getBooking(id: string): Promise<Booking>;
     getCategory(name: string): Promise<Category>;
 }
 export class Backend implements backendInterface {
@@ -115,6 +130,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createBooking(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: bigint): Promise<Booking> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            return result;
+        }
+    }
     async deleteCategory(arg0: string): Promise<void> {
         if (this.processError) {
             try {
@@ -129,6 +158,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAllBookings(): Promise<Array<Booking>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllBookings();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllBookings();
+            return result;
+        }
+    }
     async getAllCategories(): Promise<Array<Category>> {
         if (this.processError) {
             try {
@@ -140,6 +183,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getAllCategories();
+            return result;
+        }
+    }
+    async getBooking(arg0: string): Promise<Booking> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getBooking(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getBooking(arg0);
             return result;
         }
     }
