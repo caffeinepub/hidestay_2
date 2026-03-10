@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AdminAccount } from "@/context/AuthContext";
+import type { AdminAccount, RegisteredCustomer } from "@/context/AuthContext";
 import { useAuth } from "@/context/AuthContext";
 import { useActor } from "@/hooks/useActor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ import {
   Phone,
   ShieldCheck,
   TrendingUp,
+  UserCheck,
   UserPlus,
   Users,
   X,
@@ -1336,6 +1337,437 @@ function AdminAccountsTab() {
   );
 }
 
+// ---- USERS TAB ----
+const MOCK_USERS: RegisteredCustomer[] = [
+  {
+    name: "Arjun Sharma",
+    email: "arjun@example.com",
+    phone: "9876543001",
+    password: "",
+    createdAt: "2026-01-15T10:00:00.000Z",
+  },
+  {
+    name: "Priya Mehta",
+    email: "priya@example.com",
+    phone: "9876543002",
+    password: "",
+    createdAt: "2026-02-10T08:30:00.000Z",
+  },
+  {
+    name: "Rahul Singh",
+    email: "rahul@example.com",
+    phone: "9876543003",
+    password: "",
+    createdAt: "2026-02-20T14:00:00.000Z",
+  },
+];
+
+function UsersTab() {
+  const { getAllUsers, disableUser, enableUser, deleteUser } = useAuth();
+  const [tick, setTick] = useState(0);
+  const [selected, setSelected] = useState<RegisteredCustomer | null>(null);
+  const [search, setSearch] = useState("");
+
+  const registeredUsers = getAllUsers();
+  const allUsers = registeredUsers.length === 0 ? MOCK_USERS : registeredUsers;
+
+  const filtered = allUsers.filter(
+    (u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      u.phone.includes(search),
+  );
+
+  const getUserType = (u: RegisteredCustomer) =>
+    u.email === "owner@hidestay.com" ? "Hotel Owner" : "Customer";
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const handleDisable = (email: string) => {
+    disableUser(email);
+    setTick((t) => t + 1);
+    if (selected?.email === email)
+      setSelected((p) => (p ? { ...p, disabled: true } : p));
+    toast.success("Account disabled.");
+  };
+
+  const handleEnable = (email: string) => {
+    enableUser(email);
+    setTick((t) => t + 1);
+    if (selected?.email === email)
+      setSelected((p) => (p ? { ...p, disabled: false } : p));
+    toast.success("Account enabled.");
+  };
+
+  const handleDelete = (email: string) => {
+    deleteUser(email);
+    setTick((t) => t + 1);
+    setSelected(null);
+    toast.success("Account deleted.");
+  };
+
+  // Refresh selected from store after tick
+  const getLatestUser = (email: string): RegisteredCustomer | undefined => {
+    return getAllUsers().find((u) => u.email === email);
+  };
+
+  void tick;
+
+  if (selected) {
+    const latest = getLatestUser(selected.email) ?? selected;
+    const userType = getUserType(latest);
+    return (
+      <div data-ocid="super_admin.user_detail.panel" className="space-y-5">
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          data-ocid="super_admin.user_detail.back.button"
+          className="flex items-center gap-1.5 text-sm text-primary font-body hover:underline"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Users
+        </button>
+
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-foreground text-xl">
+                  {latest.name}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge
+                    className={
+                      userType === "Hotel Owner"
+                        ? "bg-amber-100 text-amber-800 font-body text-xs"
+                        : "bg-blue-100 text-blue-800 font-body text-xs"
+                    }
+                  >
+                    {userType}
+                  </Badge>
+                  {latest.disabled ? (
+                    <Badge className="bg-red-100 text-red-700 font-body text-xs">
+                      Disabled
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Full Name
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.name}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Email Address
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.email}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Phone Number
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {latest.phone || "—"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  User Type
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {userType}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  Account Created
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {formatDate(latest.createdAt)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-body uppercase tracking-wide">
+                  {userType === "Hotel Owner"
+                    ? "Properties Listed"
+                    : "Total Bookings"}
+                </p>
+                <p className="font-body font-medium text-foreground">
+                  {userType === "Hotel Owner" ? "1" : "2"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Summary */}
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="font-display font-bold text-foreground mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> Recent Activity
+            </h3>
+            {userType === "Customer" ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                  <span className="text-muted-foreground">Last booking</span>
+                  <span className="font-medium text-foreground">
+                    HIDE-20260310-4821
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                  <span className="text-muted-foreground">Destination</span>
+                  <span className="font-medium text-foreground">Rishikesh</span>
+                </div>
+                <div className="flex justify-between text-sm font-body py-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                    Confirmed
+                  </Badge>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                  <span className="text-muted-foreground">Property</span>
+                  <span className="font-medium text-foreground">
+                    The Mountain Retreat
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-body py-2 border-b border-border">
+                  <span className="text-muted-foreground">Property Status</span>
+                  <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                    Approved
+                  </Badge>
+                </div>
+                <div className="flex justify-between text-sm font-body py-2">
+                  <span className="text-muted-foreground">
+                    Total Reservations
+                  </span>
+                  <span className="font-medium text-foreground">3</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-3">
+          {latest.disabled ? (
+            <Button
+              onClick={() => handleEnable(latest.email)}
+              data-ocid="super_admin.user_detail.enable.button"
+              className="bg-green-600 hover:bg-green-700 text-white font-body font-semibold flex items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4" /> Enable Account
+            </Button>
+          ) : (
+            <Button
+              onClick={() => handleDisable(latest.email)}
+              data-ocid="super_admin.user_detail.disable.button"
+              variant="outline"
+              className="border-amber-500 text-amber-700 hover:bg-amber-50 font-body font-semibold flex items-center gap-2"
+            >
+              <X className="w-4 h-4" /> Disable Account
+            </Button>
+          )}
+          <Button
+            onClick={() => handleDelete(latest.email)}
+            data-ocid="super_admin.user_detail.delete.button"
+            variant="outline"
+            className="border-red-400 text-red-600 hover:bg-red-50 font-body font-semibold flex items-center gap-2"
+          >
+            <XCircle className="w-4 h-4" /> Delete Account
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div data-ocid="super_admin.users.panel" className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-display font-bold text-foreground text-lg">
+            Registered Users
+          </h2>
+          <p className="text-muted-foreground text-sm font-body">
+            {allUsers.length} total users
+          </p>
+        </div>
+        <div className="relative">
+          <Input
+            placeholder="Search by name, email or phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            data-ocid="super_admin.users.search_input"
+            className="font-body pl-3 w-64"
+          />
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          data-ocid="super_admin.users.empty_state"
+          className="text-center py-12 text-muted-foreground font-body"
+        >
+          <Users className="w-10 h-10 mx-auto mb-3 text-primary/30" />
+          <p className="text-sm">No users found.</p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((u, i) => {
+              const uType = getUserType(u);
+              return (
+                <Card
+                  key={u.email}
+                  data-ocid={`super_admin.users.item.${i + 1}`}
+                  onClick={() => setSelected(u)}
+                  className="border-border shadow-xs cursor-pointer hover:border-primary/40 transition-colors"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Users className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-body font-semibold text-foreground text-sm">
+                            {u.name}
+                          </p>
+                          <p className="text-muted-foreground text-xs font-body">
+                            {u.email}
+                          </p>
+                          <p className="text-muted-foreground text-xs font-body">
+                            {u.phone}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge
+                          className={
+                            uType === "Hotel Owner"
+                              ? "bg-amber-100 text-amber-800 font-body text-[10px]"
+                              : "bg-blue-100 text-blue-800 font-body text-[10px]"
+                          }
+                        >
+                          {uType}
+                        </Badge>
+                        {u.disabled ? (
+                          <Badge className="bg-red-100 text-red-700 font-body text-[10px]">
+                            Disabled
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-100 text-green-700 font-body text-[10px]">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table data-ocid="super_admin.users.table">
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-body text-xs font-semibold">
+                    Name
+                  </TableHead>
+                  <TableHead className="font-body text-xs font-semibold">
+                    Email
+                  </TableHead>
+                  <TableHead className="font-body text-xs font-semibold">
+                    Phone
+                  </TableHead>
+                  <TableHead className="font-body text-xs font-semibold">
+                    User Type
+                  </TableHead>
+                  <TableHead className="font-body text-xs font-semibold">
+                    Status
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((u, i) => {
+                  const uType = getUserType(u);
+                  return (
+                    <TableRow
+                      key={u.email}
+                      data-ocid={`super_admin.users.row.${i + 1}`}
+                      onClick={() => setSelected(u)}
+                      className="cursor-pointer hover:bg-primary/5 transition-colors"
+                    >
+                      <TableCell className="font-body text-sm font-medium text-foreground">
+                        {u.name}
+                      </TableCell>
+                      <TableCell className="font-body text-sm text-muted-foreground">
+                        {u.email}
+                      </TableCell>
+                      <TableCell className="font-body text-sm text-muted-foreground">
+                        {u.phone || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            uType === "Hotel Owner"
+                              ? "bg-amber-100 text-amber-800 font-body text-xs"
+                              : "bg-blue-100 text-blue-800 font-body text-xs"
+                          }
+                        >
+                          {uType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {u.disabled ? (
+                          <Badge className="bg-red-100 text-red-700 font-body text-xs">
+                            Disabled
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-100 text-green-700 font-body text-xs">
+                            Active
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -1454,6 +1886,9 @@ export default function SuperAdmin() {
             <TabsTrigger value="admins" data-ocid="super_admin.admins.tab">
               Admin Accounts
             </TabsTrigger>
+            <TabsTrigger value="users" data-ocid="super_admin.users.tab">
+              Users
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -1466,6 +1901,10 @@ export default function SuperAdmin() {
 
           <TabsContent value="admins">
             <AdminAccountsTab />
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UsersTab />
           </TabsContent>
         </Tabs>
       </main>

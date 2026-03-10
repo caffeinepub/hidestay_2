@@ -14,11 +14,13 @@ interface AuthState {
   hotelOwner: HotelOwner | null;
 }
 
-interface RegisteredCustomer {
+export interface RegisteredCustomer {
   name: string;
   email: string;
   phone: string;
   password: string;
+  disabled?: boolean;
+  createdAt?: string;
 }
 
 export interface AdminAccount {
@@ -62,6 +64,10 @@ interface AuthContextValue extends AuthState {
   checkCustomerExists: (emailOrPhone: string) => boolean;
   checkHotelOwnerExists: (emailOrPhone: string) => boolean;
   getAdminAccounts: () => AdminAccount[];
+  getAllUsers: () => RegisteredCustomer[];
+  disableUser: (email: string) => void;
+  enableUser: (email: string) => void;
+  deleteUser: (email: string) => void;
   setHotelOwner: (owner: HotelOwner | null) => void;
   logout: () => void;
 }
@@ -165,6 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         c.password === password,
     );
     if (match) {
+      // Block disabled accounts
+      if (match.disabled) return false;
       setState({
         role: "customer",
         user: { name: match.name, email: match.email },
@@ -263,7 +271,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (c) => c.email === email || c.phone === phone,
     );
     if (exists) return false;
-    customers.push({ name, email, phone, password });
+    customers.push({
+      name,
+      email,
+      phone,
+      password,
+      createdAt: new Date().toISOString(),
+    });
     saveRegisteredCustomers(customers);
     setState({ role: "customer", user: { name, email }, hotelOwner: null });
     return true;
@@ -361,6 +375,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return getStoredAdmins();
   };
 
+  const getAllUsers = (): RegisteredCustomer[] => {
+    const customers = getRegisteredCustomers();
+    // Add demo owner as a "hotel_owner" type entry if not already present
+    const demoOwner: RegisteredCustomer = {
+      name: "Hotel Owner",
+      email: "owner@hidestay.com",
+      phone: "9876543210",
+      password: "",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const hasDemo = customers.some((c) => c.email === "owner@hidestay.com");
+    return hasDemo ? customers : [demoOwner, ...customers];
+  };
+
+  const disableUser = (email: string) => {
+    const customers = getRegisteredCustomers();
+    const idx = customers.findIndex((c) => c.email === email);
+    if (idx !== -1) {
+      customers[idx].disabled = true;
+      saveRegisteredCustomers(customers);
+    }
+  };
+
+  const enableUser = (email: string) => {
+    const customers = getRegisteredCustomers();
+    const idx = customers.findIndex((c) => c.email === email);
+    if (idx !== -1) {
+      customers[idx].disabled = false;
+      saveRegisteredCustomers(customers);
+    }
+  };
+
+  const deleteUser = (email: string) => {
+    const customers = getRegisteredCustomers();
+    const filtered = customers.filter((c) => c.email !== email);
+    saveRegisteredCustomers(filtered);
+  };
+
   const logout = () => {
     setState({ role: null, user: null, hotelOwner: null });
   };
@@ -383,6 +435,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkCustomerExists,
         checkHotelOwnerExists,
         getAdminAccounts,
+        getAllUsers,
+        disableUser,
+        enableUser,
+        deleteUser,
         setHotelOwner,
         logout,
       }}
