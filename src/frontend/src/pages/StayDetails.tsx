@@ -116,7 +116,7 @@ export default function StayDetails() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-32">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-52">
         {/* Image Gallery */}
         <motion.section
           initial={{ opacity: 0, y: 16 }}
@@ -316,13 +316,13 @@ export default function StayDetails() {
         </motion.section>
       </main>
 
-      {/* Sticky Book Now Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/97 backdrop-blur border-t border-border px-4 py-4 sm:px-6">
+      {/* Sticky Book Now Footer — sits above the bottom nav bar (bottom-16 = 64px) */}
+      <div className="fixed bottom-16 left-0 right-0 z-40 bg-white/97 backdrop-blur border-t border-border px-4 py-3 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <Button
             data-ocid="details.book_now.primary_button"
             onClick={() => setBookingOpen(true)}
-            className="w-full h-14 text-lg font-display font-bold tracking-wide bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl shadow-md"
+            className="w-full h-14 text-lg font-display font-bold tracking-wide bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-md"
           >
             Book Now — {price}
           </Button>
