@@ -12,6 +12,7 @@ const SAMPLE_TOURS: VirtualTour[] = [
     description:
       "Panoramic mountain views from the comfort of a luxurious king-size suite with private balcony.",
     imageDataUrl: "https://picsum.photos/seed/room1/1200/600",
+    status: "approved" as const,
   },
   {
     id: "sample-2",
@@ -20,6 +21,7 @@ const SAMPLE_TOURS: VirtualTour[] = [
     description:
       "Warm wood interiors and floor-to-ceiling windows overlooking the Uttarakhand valley.",
     imageDataUrl: "https://picsum.photos/seed/room2/1200/600",
+    status: "approved" as const,
   },
   {
     id: "sample-3",
@@ -28,6 +30,7 @@ const SAMPLE_TOURS: VirtualTour[] = [
     description:
       "Spacious two-bedroom layout with a cozy living area, perfect for family getaways.",
     imageDataUrl: "https://picsum.photos/seed/room3/1200/600",
+    status: "approved" as const,
   },
 ];
 
@@ -108,7 +111,8 @@ export default function VirtualTourSection({
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       const parsed: VirtualTour[] = stored ? JSON.parse(stored) : [];
-      return parsed.length > 0 ? parsed : SAMPLE_TOURS;
+      const approved = parsed.filter((t) => t.status === "approved");
+      return approved.length > 0 ? approved : SAMPLE_TOURS;
     } catch {
       return SAMPLE_TOURS;
     }

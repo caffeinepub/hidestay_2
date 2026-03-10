@@ -1,4 +1,5 @@
 import type { Property } from "@/backend";
+import type { VirtualTour } from "@/components/VirtualTourManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,7 @@ import {
   LogOut,
   MapPin,
   Phone,
+  RefreshCw,
   ScrollText,
   ShieldCheck,
   Star,
@@ -3260,6 +3262,300 @@ function PlatformSettingsTab() {
   );
 }
 
+function VirtualTourApprovalsTab() {
+  const TOURS_KEY = "hidestay_virtual_tours";
+  const [tours, setTours] = useState<VirtualTour[]>(() => {
+    try {
+      const stored = localStorage.getItem(TOURS_KEY);
+      return stored ? (JSON.parse(stored) as VirtualTour[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
+  const [previewTour, setPreviewTour] = useState<VirtualTour | null>(null);
+
+  const saveTours = (updated: VirtualTour[]) => {
+    try {
+      localStorage.setItem(TOURS_KEY, JSON.stringify(updated));
+    } catch {
+      // quota
+    }
+    setTours(updated);
+  };
+
+  const handleApprove = (id: string) => {
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) return;
+    const updated = tours.map((t) =>
+      t.id === id ? { ...t, status: "approved" as const } : t,
+    );
+    saveTours(updated);
+    addActivityLog(`360° tour '${tour.roomName}' approved`, "property");
+    toast.success(`Tour "${tour.roomName}" approved.`);
+  };
+
+  const handleReject = (id: string) => {
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) return;
+    const updated = tours.map((t) =>
+      t.id === id ? { ...t, status: "rejected" as const } : t,
+    );
+    saveTours(updated);
+    addActivityLog(`360° tour '${tour.roomName}' rejected`, "property");
+    toast.error(`Tour "${tour.roomName}" rejected.`);
+  };
+
+  const getStatusBadge = (status: VirtualTour["status"] | undefined) => {
+    if (status === "approved")
+      return "bg-green-100 text-green-800 border border-green-200";
+    if (status === "rejected")
+      return "bg-red-100 text-red-800 border border-red-200";
+    return "bg-amber-100 text-amber-800 border border-amber-200";
+  };
+
+  const getStatusLabel = (status: VirtualTour["status"] | undefined) => {
+    if (status === "approved") return "Approved";
+    if (status === "rejected") return "Rejected";
+    return "Pending";
+  };
+
+  const filtered =
+    filter === "all"
+      ? tours
+      : tours.filter((t) => (t.status ?? "pending") === filter);
+
+  return (
+    <div className="space-y-6" data-ocid="super_admin.tours.section">
+      <div className="flex items-center gap-2">
+        <RefreshCw className="w-5 h-5 text-primary" />
+        <h2 className="font-display font-black text-foreground text-xl">
+          Virtual Tour Approvals
+        </h2>
+        <Badge className="bg-primary/10 text-primary border-0 font-body text-xs">
+          {filtered.length} tours
+        </Badge>
+      </div>
+
+      {/* Filter tabs */}
+      <div
+        className="flex gap-2 flex-wrap"
+        data-ocid="super_admin.tours.filter.tab"
+      >
+        {(["all", "pending", "approved", "rejected"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-full text-xs font-body font-medium transition-colors border ${
+              filter === f
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:bg-muted/50"
+            }`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          data-ocid="super_admin.tours.empty_state"
+          className="text-center py-16 text-muted-foreground font-body border-2 border-dashed border-border rounded-2xl"
+        >
+          <RefreshCw className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-semibold">No virtual tours found</p>
+          <p className="text-xs mt-1">
+            Hotel owners can upload 360° room tour images from their dashboard.
+          </p>
+        </div>
+      ) : (
+        <Card className="border-border shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Preview
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Room Name
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Room Type
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="font-body font-semibold text-foreground">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((tour, i) => (
+                  <TableRow
+                    key={tour.id}
+                    data-ocid={`super_admin.tours.item.${i + 1}`}
+                    className="hover:bg-muted/30"
+                  >
+                    <TableCell>
+                      {/* biome-ignore lint/a11y/useKeyWithClickEvents: thumbnail click-to-preview is supplemental; Preview button handles keyboard */}
+                      <div
+                        className="w-20 h-14 rounded-lg overflow-hidden bg-muted cursor-pointer"
+                        onClick={() => setPreviewTour(tour)}
+                      >
+                        <img
+                          src={tour.imageDataUrl}
+                          alt={tour.roomName}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-body font-medium text-foreground">
+                      {tour.roomName}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full"
+                        style={{ background: "#FF9933", color: "#1a1a1a" }}
+                      >
+                        {tour.roomType}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${getStatusBadge(tour.status)}`}
+                      >
+                        {getStatusLabel(tour.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          data-ocid={`super_admin.tours.preview.button.${i + 1}`}
+                          onClick={() => setPreviewTour(tour)}
+                          className="px-2.5 py-1 text-xs font-body font-medium rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                        >
+                          Preview
+                        </button>
+                        <button
+                          type="button"
+                          data-ocid={`super_admin.tours.approve.button.${i + 1}`}
+                          onClick={() => handleApprove(tour.id)}
+                          disabled={(tour.status ?? "pending") === "approved"}
+                          className="px-2.5 py-1 text-xs font-body font-semibold rounded-lg bg-[#1F7A4C] text-white hover:bg-[#185e3a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          data-ocid={`super_admin.tours.reject.button.${i + 1}`}
+                          onClick={() => handleReject(tour.id)}
+                          disabled={(tour.status ?? "pending") === "rejected"}
+                          className="px-2.5 py-1 text-xs font-body font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
+      {/* Full-screen preview modal */}
+      {previewTour && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-close is supplemental; X button handles keyboard
+        <div
+          data-ocid="super_admin.tours.preview.modal"
+          className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center"
+          onClick={() => setPreviewTour(null)}
+        >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: stop propagation only */}
+          <div
+            className="relative max-w-5xl w-full px-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-display font-bold text-white text-xl">
+                  {previewTour.roomName}
+                </h3>
+                <span
+                  className="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full mt-1"
+                  style={{ background: "#FF9933", color: "#1a1a1a" }}
+                >
+                  {previewTour.roomType}
+                </span>
+                <span
+                  className={`inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full ml-2 ${getStatusBadge(previewTour.status)}`}
+                >
+                  {getStatusLabel(previewTour.status)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewTour(null)}
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{ maxHeight: "60vh" }}
+            >
+              <img
+                src={previewTour.imageDataUrl}
+                alt={previewTour.roomName}
+                className="w-full h-full object-cover"
+                style={{ maxHeight: "60vh" }}
+              />
+            </div>
+            {previewTour.description && (
+              <p className="text-white/80 font-body text-sm mt-3 text-center">
+                {previewTour.description}
+              </p>
+            )}
+            <div className="flex justify-center gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  handleApprove(previewTour.id);
+                  setPreviewTour(null);
+                }}
+                className="px-5 py-2 text-sm font-body font-semibold rounded-xl bg-[#1F7A4C] text-white hover:bg-[#185e3a] transition-colors"
+              >
+                Approve Tour
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleReject(previewTour.id);
+                  setPreviewTour(null);
+                }}
+                className="px-5 py-2 text-sm font-body font-semibold rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Reject Tour
+              </button>
+            </div>
+            <p className="text-white/50 font-body text-xs mt-3 text-center">
+              Click outside to close
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -3547,6 +3843,9 @@ export default function SuperAdmin() {
             <TabsTrigger value="settings" data-ocid="super_admin.settings.tab">
               Platform Settings
             </TabsTrigger>
+            <TabsTrigger value="tours" data-ocid="super_admin.tours.tab">
+              Virtual Tours
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings">
@@ -3573,6 +3872,9 @@ export default function SuperAdmin() {
           </TabsContent>
           <TabsContent value="settings">
             <PlatformSettingsTab />
+          </TabsContent>
+          <TabsContent value="tours">
+            <VirtualTourApprovalsTab />
           </TabsContent>
         </Tabs>
       </main>

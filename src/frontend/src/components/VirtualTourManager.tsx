@@ -31,6 +31,7 @@ export interface VirtualTour {
   roomType: string;
   description: string;
   imageDataUrl: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 const EMPTY_FORM = {
@@ -94,6 +95,7 @@ export default function VirtualTourManager() {
       roomType: form.roomType,
       description: form.description.trim(),
       imageDataUrl: form.imageDataUrl,
+      status: "pending" as const,
     };
     setTours((prev) => [...prev, newTour]);
     setForm({ ...EMPTY_FORM });
@@ -191,6 +193,21 @@ export default function VirtualTourManager() {
                         style={{ background: "#FF9933", color: "#1a1a1a" }}
                       >
                         {tour.roomType}
+                      </span>
+                      <span
+                        className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ml-1 ${
+                          tour.status === "approved"
+                            ? "bg-green-100 text-green-800 border border-green-200"
+                            : tour.status === "rejected"
+                              ? "bg-red-100 text-red-800 border border-red-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                        }`}
+                      >
+                        {tour.status === "approved"
+                          ? "Approved"
+                          : tour.status === "rejected"
+                            ? "Rejected"
+                            : "Pending Review"}
                       </span>
                       {tour.description && (
                         <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-1">
