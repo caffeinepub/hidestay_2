@@ -1,5 +1,5 @@
 import { ExternalBlob } from "@/backend";
-import type { Property } from "@/backend";
+import type { Booking, Property } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 import { useActor } from "@/hooks/useActor";
@@ -20,6 +21,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Building2,
+  CalendarDays,
   Clock,
   IndianRupee,
   Loader2,
@@ -28,6 +30,7 @@ import {
   Phone,
   PlusCircle,
   Upload,
+  User,
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -113,7 +116,9 @@ export default function HotelAdmin() {
 
   const ownerEmail = hotelOwner?.email || user?.email || "";
 
-  const { data: properties = [], isLoading } = useQuery<Property[]>({
+  const { data: properties = [], isLoading: propertiesLoading } = useQuery<
+    Property[]
+  >({
     queryKey: ["myProperties", ownerEmail],
     queryFn: async () => {
       if (!actor || !ownerEmail) return [];
@@ -121,6 +126,21 @@ export default function HotelAdmin() {
     },
     enabled: !!actor && !!ownerEmail && isOwnerLoggedIn,
   });
+
+  const { data: allBookings = [], isLoading: bookingsLoading } = useQuery<
+    Booking[]
+  >({
+    queryKey: ["allBookings"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllBookings();
+    },
+    enabled: !!actor && isOwnerLoggedIn,
+  });
+
+  // Filter bookings for this owner's properties
+  const propertyNames = new Set(properties.map((p) => p.propertyName));
+  const myBookings = allBookings.filter((b) => propertyNames.has(b.stayName));
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -136,7 +156,6 @@ export default function HotelAdmin() {
         throw new Error("Please fill in all required fields.");
       }
 
-      // Upload images
       const imageUrls: string[] = [];
       for (let idx = 0; idx < imageFiles.length; idx++) {
         const file = imageFiles[idx];
@@ -594,7 +613,6 @@ export default function HotelAdmin() {
             </CardContent>
           </Card>
 
-          {/* Upload progress */}
           {submitMutation.isPending &&
             uploadProgress > 0 &&
             uploadProgress < 100 && (
@@ -631,7 +649,7 @@ export default function HotelAdmin() {
     );
   }
 
-  // Dashboard view
+  // Dashboard view with tabs
   return (
     <div
       data-ocid="hotel_admin.page"
@@ -671,84 +689,218 @@ export default function HotelAdmin() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-        {isLoading ? (
-          <div
-            data-ocid="hotel_admin.properties.loading_state"
-            className="flex items-center justify-center py-16"
-          >
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
-        ) : properties.length === 0 ? (
-          <div
-            data-ocid="hotel_admin.properties.empty_state"
-            className="text-center py-16 text-muted-foreground font-body"
-          >
-            <Building2 className="w-12 h-12 mx-auto mb-4 text-primary/30" />
-            <p className="text-lg font-display font-bold text-foreground">
-              No properties yet
-            </p>
-            <p className="text-sm mt-1">
-              Submit your first property to get started.
-            </p>
-            <Button
-              className="mt-4 bg-primary text-primary-foreground"
-              onClick={() => setShowForm(true)}
-              data-ocid="hotel_admin.empty.add_property.button"
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <Tabs defaultValue="properties" data-ocid="hotel_admin.tabs">
+          <TabsList className="mb-6 w-full">
+            <TabsTrigger
+              value="properties"
+              data-ocid="hotel_admin.properties.tab"
+              className="flex-1 font-body"
             >
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Add First Property
-            </Button>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground font-body">
-              {properties.length}{" "}
-              {properties.length === 1 ? "property" : "properties"} listed
-            </p>
-            {properties.map((prop, i) => (
-              <Card
-                key={prop.id}
-                data-ocid={`hotel_admin.property.item.${i + 1}`}
-                className="border-border shadow-xs"
+              <Building2 className="w-4 h-4 mr-1.5" />
+              My Properties
+            </TabsTrigger>
+            <TabsTrigger
+              value="bookings"
+              data-ocid="hotel_admin.bookings.tab"
+              className="flex-1 font-body"
+            >
+              <CalendarDays className="w-4 h-4 mr-1.5" />
+              My Bookings
+              {myBookings.length > 0 && (
+                <span className="ml-1.5 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {myBookings.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Properties Tab */}
+          <TabsContent value="properties" className="space-y-4">
+            {propertiesLoading ? (
+              <div
+                data-ocid="hotel_admin.properties.loading_state"
+                className="flex items-center justify-center py-16"
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      {prop.imageUrls.length > 0 ? (
-                        <img
-                          src={prop.imageUrls[0]}
-                          alt={prop.propertyName}
-                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-7 h-7 text-primary" />
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="font-display font-bold text-foreground">
-                          {prop.propertyName}
-                        </h3>
-                        <p className="text-muted-foreground text-sm font-body">
-                          {prop.city} · {prop.propertyType}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-primary font-body font-semibold text-sm">
-                            ₹
-                            {Number(prop.pricePerNight).toLocaleString("en-IN")}
-                            /night
-                          </span>
-                          <StatusBadge status={prop.status} />
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : properties.length === 0 ? (
+              <div
+                data-ocid="hotel_admin.properties.empty_state"
+                className="text-center py-16 text-muted-foreground font-body"
+              >
+                <Building2 className="w-12 h-12 mx-auto mb-4 text-primary/30" />
+                <p className="text-lg font-display font-bold text-foreground">
+                  No properties yet
+                </p>
+                <p className="text-sm mt-1">
+                  Submit your first property to get started.
+                </p>
+                <Button
+                  className="mt-4 bg-primary text-primary-foreground"
+                  onClick={() => setShowForm(true)}
+                  data-ocid="hotel_admin.empty.add_property.button"
+                >
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Add First Property
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground font-body">
+                  {properties.length}{" "}
+                  {properties.length === 1 ? "property" : "properties"} listed
+                </p>
+                {properties.map((prop, i) => (
+                  <Card
+                    key={prop.id}
+                    data-ocid={`hotel_admin.property.item.${i + 1}`}
+                    className="border-border shadow-xs"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          {prop.imageUrls.length > 0 ? (
+                            <img
+                              src={prop.imageUrls[0]}
+                              alt={prop.propertyName}
+                              className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="w-7 h-7 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="font-display font-bold text-foreground">
+                              {prop.propertyName}
+                            </h3>
+                            <p className="text-muted-foreground text-sm font-body">
+                              {prop.city} · {prop.propertyType}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-primary font-body font-semibold text-sm">
+                                ₹
+                                {Number(prop.pricePerNight).toLocaleString(
+                                  "en-IN",
+                                )}
+                                /night
+                              </span>
+                              <StatusBadge status={prop.status} />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+          </TabsContent>
+
+          {/* My Bookings Tab */}
+          <TabsContent value="bookings" className="space-y-4">
+            {bookingsLoading ? (
+              <div
+                data-ocid="hotel_admin.bookings.loading_state"
+                className="flex items-center justify-center py-16"
+              >
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : myBookings.length === 0 ? (
+              <div
+                data-ocid="hotel_admin.bookings.empty_state"
+                className="text-center py-16 text-muted-foreground font-body"
+              >
+                <CalendarDays className="w-12 h-12 mx-auto mb-4 text-primary/30" />
+                <p className="text-lg font-display font-bold text-foreground">
+                  No bookings yet
+                </p>
+                <p className="text-sm mt-1">
+                  Bookings for your approved properties will appear here.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground font-body">
+                  {myBookings.length}{" "}
+                  {myBookings.length === 1 ? "booking" : "bookings"} received
+                </p>
+                {myBookings.map((booking, i) => (
+                  <Card
+                    key={booking.id}
+                    data-ocid={`hotel_admin.booking.item.${i + 1}`}
+                    className="border-border shadow-xs"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                          <h3 className="font-display font-bold text-foreground">
+                            {booking.stayName}
+                          </h3>
+                          <p className="text-xs text-muted-foreground font-body mt-0.5">
+                            ID: {booking.id}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-green-100 text-green-800 border-green-200 font-body flex-shrink-0">
+                          Confirmed
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-start gap-2">
+                          <User className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-body font-medium text-foreground">
+                              {booking.guestName}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-body">
+                              {booking.guests.toString()} guest
+                              {Number(booking.guests) !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Phone className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-body font-medium text-foreground">
+                              {booking.phone}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-body">
+                              {booking.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-body font-medium text-foreground">
+                              Check-in
+                            </p>
+                            <p className="text-xs text-muted-foreground font-body">
+                              {booking.checkin}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <CalendarDays className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-body font-medium text-foreground">
+                              Check-out
+                            </p>
+                            <p className="text-xs text-muted-foreground font-body">
+                              {booking.checkout}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
