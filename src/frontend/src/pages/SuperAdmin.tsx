@@ -40,6 +40,17 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 
 type BookingStatus = "Confirmed" | "Pending" | "Cancelled" | "Completed";
@@ -153,31 +164,70 @@ const MOCK_BOOKINGS: AdminBooking[] = [
   },
 ];
 
-const STATS = [
+const ANALYTICS_STATS = [
+  {
+    label: "Total Users",
+    value: "8,921",
+    icon: Users,
+    color: "text-purple-600",
+    bg: "bg-purple-50",
+  },
+  {
+    label: "Hotel Owners",
+    value: "312",
+    icon: UserCheck,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+  },
+  {
+    label: "Total Properties",
+    value: "342",
+    icon: Building2,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
+  },
   {
     label: "Total Bookings",
     value: "1,284",
     icon: TrendingUp,
     color: "text-primary",
+    bg: "bg-green-50",
   },
   {
-    label: "Total Revenue",
-    value: "₹48,36,500",
-    icon: IndianRupee,
-    color: "text-emerald-600",
+    label: "Pending Approvals",
+    value: "18",
+    icon: Clock,
+    color: "text-amber-600",
+    bg: "bg-amber-50",
   },
-  {
-    label: "Active Properties",
-    value: "342",
-    icon: Building2,
-    color: "text-blue-600",
-  },
-  {
-    label: "Registered Users",
-    value: "8,921",
-    icon: Users,
-    color: "text-purple-600",
-  },
+];
+
+const BOOKINGS_PER_DAY = [
+  { day: "Mon", bookings: 42 },
+  { day: "Tue", bookings: 58 },
+  { day: "Wed", bookings: 35 },
+  { day: "Thu", bookings: 71 },
+  { day: "Fri", bookings: 89 },
+  { day: "Sat", bookings: 124 },
+  { day: "Sun", bookings: 96 },
+];
+
+const NEW_USERS_PER_WEEK = [
+  { week: "W1 Feb", users: 184 },
+  { week: "W2 Feb", users: 221 },
+  { week: "W3 Feb", users: 198 },
+  { week: "W4 Feb", users: 267 },
+  { week: "W1 Mar", users: 312 },
+  { week: "W2 Mar", users: 289 },
+];
+
+const PROPERTY_GROWTH = [
+  { month: "Oct", properties: 210 },
+  { month: "Nov", properties: 248 },
+  { month: "Dec", properties: 271 },
+  { month: "Jan", properties: 298 },
+  { month: "Feb", properties: 321 },
+  { month: "Mar", properties: 342 },
 ];
 
 function StatusBadge({ status }: { status: string }) {
@@ -1846,30 +1896,184 @@ export default function SuperAdmin() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {STATS.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={stat.label}
-                data-ocid="super_admin.stats.card"
-                className="border-border shadow-xs"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon className={`w-5 h-5 ${stat.color}`} />
-                    <span className="text-muted-foreground text-xs font-body">
+        {/* Analytics Summary */}
+        <div data-ocid="super_admin.analytics.section" className="mb-8">
+          <h2 className="font-display font-bold text-foreground text-lg mb-4">
+            Analytics Overview
+          </h2>
+
+          {/* 5 Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {ANALYTICS_STATS.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <Card
+                  key={stat.label}
+                  data-ocid="super_admin.stats.card"
+                  className="border-border shadow-xs hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div
+                      className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-3`}
+                    >
+                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                    <p className="font-display font-black text-foreground text-2xl leading-none mb-1">
+                      {stat.value}
+                    </p>
+                    <p className="text-muted-foreground text-xs font-body leading-tight">
                       {stat.label}
-                    </span>
-                  </div>
-                  <p className="font-display font-black text-foreground text-2xl">
-                    {stat.value}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Bookings per day */}
+            <Card
+              data-ocid="super_admin.bookings_chart.card"
+              className="border-border shadow-xs"
+            >
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="font-display text-sm font-semibold text-foreground">
+                  Bookings per Day
+                </CardTitle>
+                <p className="text-muted-foreground text-xs font-body">
+                  Last 7 days
+                </p>
+              </CardHeader>
+              <CardContent className="px-2 pb-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart
+                    data={BOOKINGS_PER_DAY}
+                    margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                      }}
+                    />
+                    <Bar
+                      dataKey="bookings"
+                      fill="#1F7A4C"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* New users per week */}
+            <Card
+              data-ocid="super_admin.users_chart.card"
+              className="border-border shadow-xs"
+            >
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="font-display text-sm font-semibold text-foreground">
+                  New Users per Week
+                </CardTitle>
+                <p className="text-muted-foreground text-xs font-body">
+                  Last 6 weeks
+                </p>
+              </CardHeader>
+              <CardContent className="px-2 pb-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart
+                    data={NEW_USERS_PER_WEEK}
+                    margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="week"
+                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                      }}
+                    />
+                    <Bar dataKey="users" fill="#7C3AED" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Property listings growth */}
+            <Card
+              data-ocid="super_admin.properties_chart.card"
+              className="border-border shadow-xs"
+            >
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="font-display text-sm font-semibold text-foreground">
+                  Property Listings Growth
+                </CardTitle>
+                <p className="text-muted-foreground text-xs font-body">
+                  Last 6 months
+                </p>
+              </CardHeader>
+              <CardContent className="px-2 pb-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart
+                    data={PROPERTY_GROWTH}
+                    margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="properties"
+                      stroke="#2563EB"
+                      strokeWidth={2.5}
+                      dot={{ fill: "#2563EB", r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Tabs defaultValue="bookings" data-ocid="super_admin.tabs">
