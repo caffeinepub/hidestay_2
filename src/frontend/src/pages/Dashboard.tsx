@@ -7,34 +7,30 @@ import { motion } from "motion/react";
 const CATEGORIES = [
   {
     name: "Hotels",
-    description:
-      "Comfortable stays with premium amenities and professional service for every traveler.",
+    description: "Premium amenities, professional service, comfort guaranteed.",
     icon: Building2,
-    image: "/assets/generated/hotels-card.dim_600x400.jpg",
+    image: "/assets/generated/category-hotels.dim_600x400.jpg",
     ocid: "dashboard.hotels.card",
   },
   {
     name: "Resorts",
-    description:
-      "Escape to paradise with world-class resorts nestled in nature's most breathtaking settings.",
+    description: "World-class escapes in nature's most breathtaking settings.",
     icon: Palmtree,
-    image: "/assets/generated/resorts-card.dim_600x400.jpg",
+    image: "/assets/generated/category-resorts.dim_600x400.jpg",
     ocid: "dashboard.resorts.card",
   },
   {
     name: "Homestays",
-    description:
-      "Live like a local. Authentic experiences with welcoming hosts across hidden destinations.",
+    description: "Authentic local experiences with warm Uttarakhand hosts.",
     icon: Home,
-    image: "/assets/generated/homestays-card.dim_600x400.jpg",
+    image: "/assets/generated/category-homestays.dim_600x400.jpg",
     ocid: "dashboard.homestays.card",
   },
   {
     name: "Guest Houses",
-    description:
-      "Cozy, affordable, and full of character — your home away from home while exploring.",
+    description: "Cozy, affordable stays full of character and charm.",
     icon: KeyRound,
-    image: "/assets/generated/guesthouses-card.dim_600x400.jpg",
+    image: "/assets/generated/category-guesthouses.dim_600x400.jpg",
     ocid: "dashboard.guesthouses.card",
   },
 ];
@@ -77,7 +73,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Hero Banner — Uttarakhand Mountains with Indian flag gradient */}
+      {/* Hero Banner */}
       <section
         className="relative h-64 sm:h-80 w-full overflow-hidden"
         style={{
@@ -87,11 +83,8 @@ export default function Dashboard() {
           backgroundPosition: "center 40%",
         }}
       >
-        {/* Saffron top gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#FF9933]/40 via-white/5 to-[#1F7A4C]/50" />
-        {/* Light text-readability overlay */}
         <div className="absolute inset-0 bg-black/20" />
-
         <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 gap-3">
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
@@ -132,7 +125,7 @@ export default function Dashboard() {
         </div>
 
         <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -145,33 +138,37 @@ export default function Dashboard() {
                 variants={cardVariants}
                 data-ocid={cat.ocid}
                 onClick={() => handleExplore(cat.name)}
-                className="group cursor-pointer rounded-2xl overflow-hidden border border-border bg-card shadow-xs hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300"
+                className="group cursor-pointer rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative h-56 sm:h-72"
               >
-                {/* Image */}
-                <div className="relative h-36 sm:h-48 overflow-hidden">
-                  <img
-                    src={cat.image}
-                    alt={cat.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                  {/* Icon badge */}
-                  <div className="absolute top-3 right-3 w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md">
-                    <Icon className="w-5 h-5 text-primary-foreground" />
-                  </div>
+                {/* Full-bleed background image */}
+                <img
+                  src={cat.image}
+                  alt={cat.name}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+
+                {/* Gradient overlay — dark at bottom for text legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />
+
+                {/* Icon badge top-right */}
+                <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                  <Icon className="w-4 h-4 text-white" />
                 </div>
 
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="font-display font-bold text-foreground text-base sm:text-lg mb-1">
-                    {cat.name}
-                  </h3>
-                  <p className="text-muted-foreground text-xs sm:text-sm font-body leading-relaxed line-clamp-2">
-                    {cat.description}
-                  </p>
+                {/* Text + button pinned to bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
+                  <div>
+                    <h3 className="font-display font-bold text-white text-base sm:text-lg leading-tight drop-shadow">
+                      {cat.name}
+                    </h3>
+                    <p className="text-white/80 text-xs font-body leading-snug mt-0.5 line-clamp-2 hidden sm:block">
+                      {cat.description}
+                    </p>
+                  </div>
                   <Button
                     size="sm"
-                    className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary/90 font-body font-semibold text-sm rounded-full"
+                    data-ocid={`${cat.ocid}_explore_button`}
+                    className="w-full bg-[#1F7A4C] hover:bg-[#1F7A4C]/90 text-white font-body font-semibold text-xs sm:text-sm rounded-full shadow-md"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleExplore(cat.name);
