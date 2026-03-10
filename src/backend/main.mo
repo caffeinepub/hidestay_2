@@ -5,9 +5,9 @@ import List "mo:core/List";
 import Text "mo:core/Text";
 import Map "mo:core/Map";
 import Array "mo:core/Array";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
   type Category = {
     name : Text;
