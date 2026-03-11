@@ -54,12 +54,12 @@ const cardVariants: Variants = {
 function TopStaysSection() {
   const [featuredIds, setFeaturedIds] = useState<string[]>([]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: load once
   React.useEffect(() => {
     try {
       const stored = localStorage.getItem("hidestay_featured_hotels");
       if (stored) setFeaturedIds(JSON.parse(stored));
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const MOCK_PROPERTIES = [

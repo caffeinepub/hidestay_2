@@ -77,6 +77,24 @@ const defaultAreas = (): Record<AreaKey, AreaData> => ({
   pool: { images: [], description: "" },
 });
 
+type SavedStayVerseTour = {
+  id: string;
+  tourName: string;
+  propertyId: string;
+  ownerName: string;
+  submittedAt: string;
+  status: "pending" | "approved" | "rejected" | "updates_requested";
+  adminNote?: string;
+  areas: Record<
+    string,
+    {
+      images: { id: string; url: string; caption: string }[];
+      description: string;
+    }
+  >;
+  hotspots: { id: string; fromArea: string; toArea: string; label: string }[];
+};
+
 export default function StayVerseVirtualTour() {
   const [tourData, setTourData] = useState<TourData>({
     areas: defaultAreas(),
@@ -266,6 +284,51 @@ export default function StayVerseVirtualTour() {
   const panPercent = (totalPan / 4).toFixed(2);
 
   const handleSave = () => {
+    // Save to localStorage for Super Admin review
+    try {
+      const STAYVERSE_KEY = "hidestay_stayverse_tours";
+      const existing: SavedStayVerseTour[] = (() => {
+        try {
+          const s = localStorage.getItem(STAYVERSE_KEY);
+          return s ? JSON.parse(s) : [];
+        } catch {
+          return [];
+        }
+      })();
+      // Strip File objects from images
+      const cleanAreas = Object.fromEntries(
+        (Object.keys(tourData.areas) as AreaKey[]).map((k) => [
+          k,
+          {
+            ...tourData.areas[k],
+            images: tourData.areas[k].images.map(({ id, url, caption }) => ({
+              id,
+              url,
+              caption,
+            })),
+          },
+        ]),
+      ) as Record<
+        AreaKey,
+        {
+          images: { id: string; url: string; caption: string }[];
+          description: string;
+        }
+      >;
+      const entry: SavedStayVerseTour = {
+        id: `sv-${Date.now()}-${Math.floor(Math.random() * 9999)}`,
+        tourName: tourData.tourName || "Untitled Tour",
+        propertyId: tourData.propertyId || "PROP-000",
+        ownerName: "Hotel Owner",
+        submittedAt: new Date().toISOString(),
+        status: "pending",
+        areas: cleanAreas,
+        hotspots: tourData.hotspots,
+      };
+      localStorage.setItem(STAYVERSE_KEY, JSON.stringify([...existing, entry]));
+    } catch {
+      // quota or serialization error; ignore
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

@@ -3263,6 +3263,546 @@ function PlatformSettingsTab() {
   );
 }
 
+// ── StayVerse Tours Types ────────────────────────────────────────────────────
+type SavedStayVerseTour = {
+  id: string;
+  tourName: string;
+  propertyId: string;
+  ownerName: string;
+  submittedAt: string;
+  status: "pending" | "approved" | "rejected" | "updates_requested";
+  adminNote?: string;
+  areas: Record<
+    string,
+    {
+      images: { id: string; url: string; caption: string }[];
+      description: string;
+    }
+  >;
+  hotspots: { id: string; fromArea: string; toArea: string; label: string }[];
+};
+
+const SAMPLE_STAYVERSE_TOURS: SavedStayVerseTour[] = [
+  {
+    id: "sv-sample-001",
+    tourName: "Grand Himalaya Resort Tour",
+    propertyId: "PROP-001",
+    ownerName: "Rajesh Kumar",
+    submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "pending",
+    areas: {
+      lobby: {
+        images: [],
+        description: "Grand entrance lobby with mountain views",
+      },
+      rooms: { images: [], description: "Luxury mountain view rooms" },
+      restaurant: { images: [], description: "Multi-cuisine restaurant" },
+    },
+    hotspots: [
+      { id: "hs-1", fromArea: "lobby", toArea: "rooms", label: "Go to Rooms" },
+      {
+        id: "hs-2",
+        fromArea: "lobby",
+        toArea: "restaurant",
+        label: "Go to Restaurant",
+      },
+    ],
+  },
+  {
+    id: "sv-sample-002",
+    tourName: "Mountain View Homestay Tour",
+    propertyId: "PROP-002",
+    ownerName: "Priya Sharma",
+    submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "pending",
+    areas: {
+      lobby: { images: [], description: "Cozy living room with fireplace" },
+      rooms: {
+        images: [],
+        description: "Comfortable bedrooms with valley views",
+      },
+    },
+    hotspots: [
+      { id: "hs-3", fromArea: "lobby", toArea: "rooms", label: "View Rooms" },
+    ],
+  },
+];
+
+function StayVerseToursTab() {
+  const STAYVERSE_KEY = "hidestay_stayverse_tours";
+  const [tours, setTours] = useState<SavedStayVerseTour[]>(() => {
+    try {
+      const stored = localStorage.getItem(STAYVERSE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as SavedStayVerseTour[];
+        if (parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SAMPLE_STAYVERSE_TOURS;
+  });
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "approved" | "rejected" | "updates_requested"
+  >("all");
+  const [previewTour, setPreviewTour] = useState<SavedStayVerseTour | null>(
+    null,
+  );
+  const [previewArea, setPreviewArea] = useState<string>("lobby");
+  const [previewImgIdx, setPreviewImgIdx] = useState(0);
+  const [requestUpdatesOpen, setRequestUpdatesOpen] = useState(false);
+  const [requestUpdatesTour, setRequestUpdatesTour] =
+    useState<SavedStayVerseTour | null>(null);
+  const [adminNote, setAdminNote] = useState("");
+
+  const saveTours = (updated: SavedStayVerseTour[]) => {
+    try {
+      localStorage.setItem(STAYVERSE_KEY, JSON.stringify(updated));
+    } catch {}
+    setTours(updated);
+  };
+
+  const handleApprove = (id: string) => {
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) return;
+    const updated = tours.map((t) =>
+      t.id === id ? { ...t, status: "approved" as const } : t,
+    );
+    saveTours(updated);
+    addActivityLog(`StayVerse tour '${tour.tourName}' approved`, "property");
+    toast.success(`Tour "${tour.tourName}" approved.`);
+    if (previewTour?.id === id)
+      setPreviewTour({ ...previewTour, status: "approved" });
+  };
+
+  const handleReject = (id: string) => {
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) return;
+    const updated = tours.map((t) =>
+      t.id === id ? { ...t, status: "rejected" as const } : t,
+    );
+    saveTours(updated);
+    addActivityLog(`StayVerse tour '${tour.tourName}' rejected`, "property");
+    toast.error(`Tour "${tour.tourName}" rejected.`);
+    if (previewTour?.id === id)
+      setPreviewTour({ ...previewTour, status: "rejected" });
+  };
+
+  const handleRequestUpdates = (id: string, note: string) => {
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) return;
+    const updated = tours.map((t) =>
+      t.id === id
+        ? { ...t, status: "updates_requested" as const, adminNote: note }
+        : t,
+    );
+    saveTours(updated);
+    addActivityLog(
+      `StayVerse tour '${tour.tourName}' - updates requested`,
+      "property",
+    );
+    toast.info(`Updates requested for "${tour.tourName}".`);
+    setRequestUpdatesOpen(false);
+    setRequestUpdatesTour(null);
+    setAdminNote("");
+  };
+
+  const filtered =
+    filter === "all" ? tours : tours.filter((t) => t.status === filter);
+
+  const statusBadge = (status: SavedStayVerseTour["status"]) => {
+    const map = {
+      pending: "bg-amber-100 text-amber-800",
+      approved: "bg-green-100 text-green-800",
+      rejected: "bg-red-100 text-red-800",
+      updates_requested: "bg-blue-100 text-blue-800",
+    };
+    const labels = {
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+      updates_requested: "Updates Requested",
+    };
+    return <Badge className={map[status]}>{labels[status]}</Badge>;
+  };
+
+  const areaKeys = previewTour ? Object.keys(previewTour.areas) : [];
+  const currentAreaImages = previewTour
+    ? (previewTour.areas[previewArea]?.images ?? [])
+    : [];
+
+  return (
+    <div className="space-y-4" data-ocid="super_admin.stayverse_tours.panel">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">
+          StayVerse Virtual Tour Reviews
+        </h3>
+        <span className="text-sm text-gray-500">
+          {tours.length} tours submitted
+        </span>
+      </div>
+
+      {/* Filter pills */}
+      <div
+        className="flex gap-2 flex-wrap"
+        data-ocid="super_admin.stayverse_tours.tab"
+      >
+        {(
+          [
+            "all",
+            "pending",
+            "approved",
+            "rejected",
+            "updates_requested",
+          ] as const
+        ).map((f) => (
+          <button
+            type="button"
+            key={f}
+            onClick={() => setFilter(f)}
+            data-ocid="super_admin.stayverse_tours.toggle"
+            className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+              filter === f
+                ? "bg-[#1F7A4C] text-white border-[#1F7A4C]"
+                : "bg-white text-gray-600 border-gray-200 hover:border-[#1F7A4C]"
+            }`}
+          >
+            {f === "all"
+              ? "All"
+              : f === "updates_requested"
+                ? "Updates Requested"
+                : f.charAt(0).toUpperCase() + f.slice(1)}{" "}
+            (
+            {f === "all"
+              ? tours.length
+              : tours.filter((t) => t.status === f).length}
+            )
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          className="text-center py-12 text-gray-400"
+          data-ocid="super_admin.stayverse_tours.empty_state"
+        >
+          <p className="text-lg font-medium">No virtual tours found</p>
+          <p className="text-sm mt-1">
+            Submitted StayVerse tours will appear here for review.
+          </p>
+        </div>
+      ) : (
+        <div
+          className="rounded-lg border overflow-hidden"
+          data-ocid="super_admin.stayverse_tours.table"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tour Name</TableHead>
+                <TableHead>Property ID</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Areas</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((tour, idx) => (
+                <TableRow
+                  key={tour.id}
+                  data-ocid={`super_admin.stayverse_tours.row.${idx + 1}`}
+                >
+                  <TableCell className="font-medium">{tour.tourName}</TableCell>
+                  <TableCell className="text-sm text-gray-500">
+                    {tour.propertyId}
+                  </TableCell>
+                  <TableCell>{tour.ownerName}</TableCell>
+                  <TableCell className="text-sm text-gray-500">
+                    {new Date(tour.submittedAt).toLocaleDateString("en-IN")}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {Object.keys(tour.areas).length} areas
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{statusBadge(tour.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setPreviewTour(tour);
+                          const firstArea =
+                            Object.keys(tour.areas)[0] ?? "lobby";
+                          setPreviewArea(firstArea);
+                          setPreviewImgIdx(0);
+                        }}
+                        data-ocid="super_admin.stayverse_tours.open_modal_button"
+                      >
+                        Preview
+                      </Button>
+                      {tour.status !== "approved" && (
+                        <Button
+                          size="sm"
+                          className="bg-[#1F7A4C] hover:bg-[#145c38] text-white"
+                          onClick={() => handleApprove(tour.id)}
+                          data-ocid="super_admin.stayverse_tours.confirm_button"
+                        >
+                          Approve
+                        </Button>
+                      )}
+                      {tour.status !== "rejected" && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleReject(tour.id)}
+                          data-ocid="super_admin.stayverse_tours.delete_button"
+                        >
+                          Reject
+                        </Button>
+                      )}
+                      {tour.status !== "updates_requested" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            setRequestUpdatesTour(tour);
+                            setAdminNote("");
+                            setRequestUpdatesOpen(true);
+                          }}
+                          data-ocid="super_admin.stayverse_tours.secondary_button"
+                        >
+                          Request Updates
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewTour && (
+        <Dialog
+          open={!!previewTour}
+          onOpenChange={(o) => {
+            if (!o) setPreviewTour(null);
+          }}
+        >
+          <DialogContent
+            className="max-w-2xl max-h-[90vh] overflow-y-auto"
+            data-ocid="super_admin.stayverse_tours.dialog"
+          >
+            <DialogHeader>
+              <DialogTitle>Preview: {previewTour.tourName}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Area selector */}
+              <div className="flex gap-2 flex-wrap">
+                {areaKeys.map((aKey) => (
+                  <button
+                    type="button"
+                    key={aKey}
+                    onClick={() => {
+                      setPreviewArea(aKey);
+                      setPreviewImgIdx(0);
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
+                      previewArea === aKey
+                        ? "bg-[#1F7A4C] text-white border-[#1F7A4C]"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-[#1F7A4C]"
+                    }`}
+                  >
+                    {aKey.charAt(0).toUpperCase() + aKey.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Image viewer */}
+              {currentAreaImages.length === 0 ? (
+                <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                  No images for this area
+                </div>
+              ) : (
+                <div className="relative w-full rounded-lg overflow-hidden bg-black">
+                  <img
+                    src={currentAreaImages[previewImgIdx]?.url}
+                    alt={
+                      currentAreaImages[previewImgIdx]?.caption || "Tour image"
+                    }
+                    className="w-full h-64 object-cover"
+                  />
+                  {currentAreaImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewImgIdx((i) => Math.max(0, i - 1))
+                        }
+                        disabled={previewImgIdx === 0}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center disabled:opacity-30"
+                        data-ocid="super_admin.stayverse_tours.secondary_button"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewImgIdx((i) =>
+                            Math.min(currentAreaImages.length - 1, i + 1),
+                          )
+                        }
+                        disabled={
+                          previewImgIdx === currentAreaImages.length - 1
+                        }
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center disabled:opacity-30"
+                        data-ocid="super_admin.stayverse_tours.secondary_button"
+                      >
+                        ›
+                      </button>
+                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {previewImgIdx + 1}/{currentAreaImages.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Hotspots */}
+              {previewTour.hotspots.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Navigation Hotspots
+                  </p>
+                  <div className="space-y-1">
+                    {previewTour.hotspots.map((hs) => (
+                      <div
+                        key={hs.id}
+                        className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded px-3 py-1.5"
+                      >
+                        <span className="capitalize">{hs.fromArea}</span>
+                        <span>→</span>
+                        <span className="capitalize">{hs.toArea}</span>
+                        <span className="text-gray-400">·</span>
+                        <span>{hs.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Current status:</span>
+                {statusBadge(previewTour.status)}
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => setPreviewTour(null)}
+                data-ocid="super_admin.stayverse_tours.close_button"
+              >
+                Close
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  handleReject(previewTour.id);
+                  setPreviewTour(null);
+                }}
+                data-ocid="super_admin.stayverse_tours.delete_button"
+              >
+                Reject
+              </Button>
+              <Button
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => {
+                  setRequestUpdatesTour(previewTour);
+                  setAdminNote("");
+                  setRequestUpdatesOpen(true);
+                }}
+                data-ocid="super_admin.stayverse_tours.secondary_button"
+              >
+                Request Updates
+              </Button>
+              <Button
+                className="bg-[#1F7A4C] hover:bg-[#145c38] text-white"
+                onClick={() => {
+                  handleApprove(previewTour.id);
+                  setPreviewTour(null);
+                }}
+                data-ocid="super_admin.stayverse_tours.confirm_button"
+              >
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Request Updates Dialog */}
+      <Dialog
+        open={requestUpdatesOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRequestUpdatesOpen(false);
+            setRequestUpdatesTour(null);
+          }
+        }}
+      >
+        <DialogContent data-ocid="super_admin.stayverse_tours.dialog">
+          <DialogHeader>
+            <DialogTitle>Request Updates</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Describe the changes needed for{" "}
+              <strong>{requestUpdatesTour?.tourName}</strong>:
+            </p>
+            <Textarea
+              value={adminNote}
+              onChange={(e) => setAdminNote(e.target.value)}
+              placeholder="Please update the lobby panorama images with higher resolution..."
+              rows={4}
+              data-ocid="super_admin.stayverse_tours.textarea"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRequestUpdatesOpen(false);
+                setRequestUpdatesTour(null);
+              }}
+              data-ocid="super_admin.stayverse_tours.cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!adminNote.trim()}
+              onClick={() =>
+                requestUpdatesTour &&
+                handleRequestUpdates(requestUpdatesTour.id, adminNote)
+              }
+              data-ocid="super_admin.stayverse_tours.submit_button"
+            >
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function VirtualTourApprovalsTab() {
   const TOURS_KEY = "hidestay_virtual_tours";
   const [tours, setTours] = useState<VirtualTour[]>(() => {
@@ -3885,7 +4425,28 @@ export default function SuperAdmin() {
           </TabsContent>
 
           <TabsContent value="tours">
-            <VirtualTourApprovalsTab />
+            <Tabs defaultValue="room_tours" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger
+                  value="room_tours"
+                  data-ocid="super_admin.room_tours.tab"
+                >
+                  360° Room Tours
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stayverse_tours"
+                  data-ocid="super_admin.stayverse_tours.tab"
+                >
+                  StayVerse Virtual Tours
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="room_tours">
+                <VirtualTourApprovalsTab />
+              </TabsContent>
+              <TabsContent value="stayverse_tours">
+                <StayVerseToursTab />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </main>
