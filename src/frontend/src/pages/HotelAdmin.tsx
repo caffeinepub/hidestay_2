@@ -1,5 +1,6 @@
 import { ExternalBlob } from "@/backend";
 import type { Booking, Property } from "@/backend";
+import StayVerseVirtualTour from "@/components/StayVerseVirtualTour";
 import VirtualTourManager from "@/components/VirtualTourManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   CalendarDays,
   Camera,
   Clock,
+  Globe,
   IndianRupee,
   Loader2,
   LogOut,
@@ -723,6 +725,14 @@ export default function HotelAdmin() {
               <Camera className="w-4 h-4 mr-1.5" />
               360° Tours
             </TabsTrigger>
+            <TabsTrigger
+              value="stayverse"
+              data-ocid="hotel_admin.stayverse.tab"
+              className="flex-1 font-body"
+            >
+              <Globe className="w-4 h-4 mr-1.5" />
+              StayVerse
+            </TabsTrigger>
           </TabsList>
 
           {/* Properties Tab */}
@@ -914,6 +924,11 @@ export default function HotelAdmin() {
           {/* 360° Tours Tab */}
           <TabsContent value="tours">
             <VirtualTourManager />
+          </TabsContent>
+
+          {/* StayVerse Virtual Tour Tab */}
+          <TabsContent value="stayverse">
+            <StayVerseVirtualTour />
           </TabsContent>
         </Tabs>
       </main>
