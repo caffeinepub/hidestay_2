@@ -45,14 +45,14 @@ export default function CustomerLogin() {
     }
   };
 
-  const handleForgotIdentitySubmit = (e: React.FormEvent) => {
+  const handleForgotIdentitySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError("");
     if (!forgotIdentity.trim()) {
       setForgotError("Please enter your email or phone number.");
       return;
     }
-    const exists = checkCustomerExists(forgotIdentity.trim());
+    const exists = await checkCustomerExists(forgotIdentity.trim());
     if (!exists) {
       setForgotError("No account found with that email or phone number.");
       return;

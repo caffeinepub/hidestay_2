@@ -7,17 +7,6 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export class ExternalBlob {
-    getBytes(): Promise<Uint8Array<ArrayBuffer>>;
-    getDirectURL(): string;
-    static fromURL(url: string): ExternalBlob;
-    static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
-    withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
-}
-export interface Category {
-    name: string;
-    description: string;
-}
 export interface Property {
     id: string;
     ownerEmail: string;
@@ -35,18 +24,13 @@ export interface Property {
     checkoutTime: string;
     contactPhone: string;
 }
-export interface GalleryImage {
-    id: bigint;
-    title: string;
-    blob: ExternalBlob;
-    description: string;
-    timestamp: bigint;
-}
 export interface Booking {
     id: string;
+    status: string;
     checkin: string;
     stayName: string;
     createdAt: bigint;
+    propertyId: string;
     guestName: string;
     email: string;
     checkout: string;
@@ -54,30 +38,66 @@ export interface Booking {
     guests: bigint;
     location: string;
 }
-export interface HotelOwner {
+export interface Customer {
+    active: boolean;
     password: string;
     name: string;
     email: string;
     phone: string;
 }
+export interface UserProfile {
+    userType: string;
+    name: string;
+    email: string;
+    phone: string;
+}
+export interface HotelOwner {
+    active: boolean;
+    password: string;
+    name: string;
+    email: string;
+    phone: string;
+}
+export enum UserRole {
+    admin = "admin",
+    user = "user",
+    guest = "guest"
+}
 export interface backendInterface {
-    addCategory(name: string, description: string): Promise<void>;
     approveProperty(id: string): Promise<void>;
-    createBooking(stayName: string, location: string, checkin: string, checkout: string, guestName: string, phone: string, email: string, guests: bigint): Promise<Booking>;
-    deleteCategory(name: string): Promise<void>;
-    deleteImage(id: bigint): Promise<void>;
+    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createBooking(propertyId: string, stayName: string, location: string, checkin: string, checkout: string, guestName: string, phone: string, email: string, guests: bigint): Promise<Booking>;
+    deleteBooking(id: string): Promise<void>;
+    deleteCustomer(email: string): Promise<void>;
+    deleteOwner(email: string): Promise<void>;
+    deleteProperty(id: string): Promise<void>;
+    disableCustomer(email: string): Promise<void>;
+    disableOwner(email: string): Promise<void>;
+    enableCustomer(email: string): Promise<void>;
+    enableOwner(email: string): Promise<void>;
     getAllApprovedProperties(): Promise<Array<Property>>;
     getAllBookings(): Promise<Array<Booking>>;
-    getAllCategories(): Promise<Array<Category>>;
-    getAllImages(): Promise<Array<GalleryImage>>;
+    getAllCustomers(): Promise<Array<Customer>>;
+    getAllOwners(): Promise<Array<HotelOwner>>;
     getAllPendingProperties(): Promise<Array<Property>>;
-    getBooking(id: string): Promise<Booking>;
-    getCategory(name: string): Promise<Category>;
-    getImage(id: bigint): Promise<GalleryImage>;
-    getMyProperties(ownerEmail: string): Promise<Array<Property>>;
+    getAllProperties(): Promise<Array<Property>>;
+    getBookingById(id: string): Promise<Booking>;
+    getBookingsByCustomerEmail(email: string): Promise<Array<Booking>>;
+    getBookingsByPropertyId(propertyId: string): Promise<Array<Booking>>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserRole(): Promise<UserRole>;
+    getCustomerByEmail(email: string): Promise<Customer>;
+    getPropertiesByOwner(ownerEmail: string): Promise<Array<Property>>;
+    getPropertyById(id: string): Promise<Property>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isCallerAdmin(): Promise<boolean>;
+    loginCustomer(email: string, password: string): Promise<Customer>;
     loginOwner(email: string, password: string): Promise<HotelOwner>;
+    registerCustomer(name: string, email: string, phone: string, password: string): Promise<Customer>;
     registerOwner(name: string, email: string, phone: string, password: string): Promise<HotelOwner>;
     rejectProperty(id: string): Promise<void>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
     submitProperty(propertyName: string, propertyType: string, city: string, address: string, contactPhone: string, description: string, imageUrls: Array<string>, pricePerNight: bigint, amenities: Array<string>, rules: string, checkinTime: string, checkoutTime: string, ownerEmail: string): Promise<Property>;
-    uploadImage(title: string, description: string, blob: ExternalBlob): Promise<GalleryImage>;
+    updateBookingStatus(id: string, newStatus: string): Promise<void>;
+    updateCustomerPassword(email: string, newPassword: string): Promise<void>;
 }

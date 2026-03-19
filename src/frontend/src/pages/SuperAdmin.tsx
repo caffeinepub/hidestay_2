@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { createActorWithConfig } from "@/config";
 import type { AdminAccount, RegisteredCustomer } from "@/context/AuthContext";
 import { useAuth } from "@/context/AuthContext";
 import { useActor } from "@/hooks/useActor";
@@ -476,7 +477,7 @@ function BookingsTab() {
   );
   const [showHotelModal, setShowHotelModal] = useState(false);
 
-  const updateStatus = (id: string, status: BookingStatus) => {
+  const updateStatus = async (id: string, status: BookingStatus) => {
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status } : b)),
     );
@@ -491,6 +492,13 @@ function BookingsTab() {
     toast.success(
       `Booking ${status === "Cancelled" ? "cancelled" : "confirmed"} successfully`,
     );
+    // Persist status to backend
+    try {
+      const actor = await createActorWithConfig();
+      await actor.updateBookingStatus(id, status.toLowerCase());
+    } catch {
+      // don't block UI if backend call fails
+    }
   };
 
   const getStatusColor = (status: BookingStatus) => {

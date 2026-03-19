@@ -1,4 +1,3 @@
-import { ExternalBlob } from "@/backend";
 import type { Booking, Property } from "@/backend";
 import StayVerseVirtualTour from "@/components/StayVerseVirtualTour";
 import VirtualTourManager from "@/components/VirtualTourManager";
@@ -126,7 +125,7 @@ export default function HotelAdmin() {
     queryKey: ["myProperties", ownerEmail],
     queryFn: async () => {
       if (!actor || !ownerEmail) return [];
-      return actor.getMyProperties(ownerEmail);
+      return actor.getPropertiesByOwner(ownerEmail);
     },
     enabled: !!actor && !!ownerEmail && isOwnerLoggedIn,
   });
@@ -163,21 +162,14 @@ export default function HotelAdmin() {
       const imageUrls: string[] = [];
       for (let idx = 0; idx < imageFiles.length; idx++) {
         const file = imageFiles[idx];
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8 = new Uint8Array(arrayBuffer);
-        const blob = ExternalBlob.fromBytes(uint8).withUploadProgress((pct) => {
-          setUploadProgress(
-            Math.round(
-              (idx / imageFiles.length) * 100 + pct / imageFiles.length,
-            ),
-          );
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
-        const galleryImage = await actor.uploadImage(
-          file.name,
-          `Property image for ${form.propertyName}`,
-          blob,
-        );
-        imageUrls.push(galleryImage.blob.getDirectURL());
+        imageUrls.push(dataUrl);
+        setUploadProgress(Math.round(((idx + 1) / imageFiles.length) * 100));
       }
       setUploadProgress(100);
 

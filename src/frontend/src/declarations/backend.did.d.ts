@@ -12,9 +12,11 @@ import type { Principal } from '@icp-sdk/core/principal';
 
 export interface Booking {
   'id' : string,
+  'status' : string,
   'checkin' : string,
   'stayName' : string,
   'createdAt' : bigint,
+  'propertyId' : string,
   'guestName' : string,
   'email' : string,
   'checkout' : string,
@@ -22,16 +24,15 @@ export interface Booking {
   'guests' : bigint,
   'location' : string,
 }
-export interface Category { 'name' : string, 'description' : string }
-export type ExternalBlob = Uint8Array;
-export interface GalleryImage {
-  'id' : bigint,
-  'title' : string,
-  'blob' : ExternalBlob,
-  'description' : string,
-  'timestamp' : bigint,
+export interface Customer {
+  'active' : boolean,
+  'password' : string,
+  'name' : string,
+  'email' : string,
+  'phone' : string,
 }
 export interface HotelOwner {
+  'active' : boolean,
   'password' : string,
   'name' : string,
   'email' : string,
@@ -54,6 +55,15 @@ export interface Property {
   'checkoutTime' : string,
   'contactPhone' : string,
 }
+export interface UserProfile {
+  'userType' : string,
+  'name' : string,
+  'email' : string,
+  'phone' : string,
+}
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -81,26 +91,43 @@ export interface _SERVICE {
     _CaffeineStorageRefillResult
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  'addCategory' : ActorMethod<[string, string], undefined>,
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'approveProperty' : ActorMethod<[string], undefined>,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createBooking' : ActorMethod<
-    [string, string, string, string, string, string, string, bigint],
+    [string, string, string, string, string, string, string, string, bigint],
     Booking
   >,
-  'deleteCategory' : ActorMethod<[string], undefined>,
-  'deleteImage' : ActorMethod<[bigint], undefined>,
+  'deleteBooking' : ActorMethod<[string], undefined>,
+  'deleteCustomer' : ActorMethod<[string], undefined>,
+  'deleteOwner' : ActorMethod<[string], undefined>,
+  'deleteProperty' : ActorMethod<[string], undefined>,
+  'disableCustomer' : ActorMethod<[string], undefined>,
+  'disableOwner' : ActorMethod<[string], undefined>,
+  'enableCustomer' : ActorMethod<[string], undefined>,
+  'enableOwner' : ActorMethod<[string], undefined>,
   'getAllApprovedProperties' : ActorMethod<[], Array<Property>>,
   'getAllBookings' : ActorMethod<[], Array<Booking>>,
-  'getAllCategories' : ActorMethod<[], Array<Category>>,
-  'getAllImages' : ActorMethod<[], Array<GalleryImage>>,
+  'getAllCustomers' : ActorMethod<[], Array<Customer>>,
+  'getAllOwners' : ActorMethod<[], Array<HotelOwner>>,
   'getAllPendingProperties' : ActorMethod<[], Array<Property>>,
-  'getBooking' : ActorMethod<[string], Booking>,
-  'getCategory' : ActorMethod<[string], Category>,
-  'getImage' : ActorMethod<[bigint], GalleryImage>,
-  'getMyProperties' : ActorMethod<[string], Array<Property>>,
+  'getAllProperties' : ActorMethod<[], Array<Property>>,
+  'getBookingById' : ActorMethod<[string], Booking>,
+  'getBookingsByCustomerEmail' : ActorMethod<[string], Array<Booking>>,
+  'getBookingsByPropertyId' : ActorMethod<[string], Array<Booking>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCustomerByEmail' : ActorMethod<[string], Customer>,
+  'getPropertiesByOwner' : ActorMethod<[string], Array<Property>>,
+  'getPropertyById' : ActorMethod<[string], Property>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'loginCustomer' : ActorMethod<[string, string], Customer>,
   'loginOwner' : ActorMethod<[string, string], HotelOwner>,
+  'registerCustomer' : ActorMethod<[string, string, string, string], Customer>,
   'registerOwner' : ActorMethod<[string, string, string, string], HotelOwner>,
   'rejectProperty' : ActorMethod<[string], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'submitProperty' : ActorMethod<
     [
       string,
@@ -119,7 +146,8 @@ export interface _SERVICE {
     ],
     Property
   >,
-  'uploadImage' : ActorMethod<[string, string, ExternalBlob], GalleryImage>,
+  'updateBookingStatus' : ActorMethod<[string, string], undefined>,
+  'updateCustomerPassword' : ActorMethod<[string, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -19,11 +19,18 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const Booking = IDL.Record({
   'id' : IDL.Text,
+  'status' : IDL.Text,
   'checkin' : IDL.Text,
   'stayName' : IDL.Text,
   'createdAt' : IDL.Int,
+  'propertyId' : IDL.Text,
   'guestName' : IDL.Text,
   'email' : IDL.Text,
   'checkout' : IDL.Text,
@@ -48,20 +55,22 @@ export const Property = IDL.Record({
   'checkoutTime' : IDL.Text,
   'contactPhone' : IDL.Text,
 });
-export const Category = IDL.Record({
+export const Customer = IDL.Record({
+  'active' : IDL.Bool,
+  'password' : IDL.Text,
   'name' : IDL.Text,
-  'description' : IDL.Text,
-});
-export const ExternalBlob = IDL.Vec(IDL.Nat8);
-export const GalleryImage = IDL.Record({
-  'id' : IDL.Nat,
-  'title' : IDL.Text,
-  'blob' : ExternalBlob,
-  'description' : IDL.Text,
-  'timestamp' : IDL.Int,
+  'email' : IDL.Text,
+  'phone' : IDL.Text,
 });
 export const HotelOwner = IDL.Record({
+  'active' : IDL.Bool,
   'password' : IDL.Text,
+  'name' : IDL.Text,
+  'email' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const UserProfile = IDL.Record({
+  'userType' : IDL.Text,
   'name' : IDL.Text,
   'email' : IDL.Text,
   'phone' : IDL.Text,
@@ -94,10 +103,12 @@ export const idlService = IDL.Service({
       [],
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-  'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'approveProperty' : IDL.Func([IDL.Text], [], []),
+  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'createBooking' : IDL.Func(
       [
+        IDL.Text,
         IDL.Text,
         IDL.Text,
         IDL.Text,
@@ -110,24 +121,56 @@ export const idlService = IDL.Service({
       [Booking],
       [],
     ),
-  'deleteCategory' : IDL.Func([IDL.Text], [], []),
-  'deleteImage' : IDL.Func([IDL.Nat], [], []),
+  'deleteBooking' : IDL.Func([IDL.Text], [], []),
+  'deleteCustomer' : IDL.Func([IDL.Text], [], []),
+  'deleteOwner' : IDL.Func([IDL.Text], [], []),
+  'deleteProperty' : IDL.Func([IDL.Text], [], []),
+  'disableCustomer' : IDL.Func([IDL.Text], [], []),
+  'disableOwner' : IDL.Func([IDL.Text], [], []),
+  'enableCustomer' : IDL.Func([IDL.Text], [], []),
+  'enableOwner' : IDL.Func([IDL.Text], [], []),
   'getAllApprovedProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
   'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
-  'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
-  'getAllImages' : IDL.Func([], [IDL.Vec(GalleryImage)], ['query']),
+  'getAllCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
+  'getAllOwners' : IDL.Func([], [IDL.Vec(HotelOwner)], ['query']),
   'getAllPendingProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
-  'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
-  'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
-  'getImage' : IDL.Func([IDL.Nat], [GalleryImage], ['query']),
-  'getMyProperties' : IDL.Func([IDL.Text], [IDL.Vec(Property)], ['query']),
+  'getAllProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
+  'getBookingById' : IDL.Func([IDL.Text], [Booking], ['query']),
+  'getBookingsByCustomerEmail' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(Booking)],
+      ['query'],
+    ),
+  'getBookingsByPropertyId' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(Booking)],
+      ['query'],
+    ),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getCustomerByEmail' : IDL.Func([IDL.Text], [Customer], ['query']),
+  'getPropertiesByOwner' : IDL.Func([IDL.Text], [IDL.Vec(Property)], ['query']),
+  'getPropertyById' : IDL.Func([IDL.Text], [Property], ['query']),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
+  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'loginCustomer' : IDL.Func([IDL.Text, IDL.Text], [Customer], []),
   'loginOwner' : IDL.Func([IDL.Text, IDL.Text], [HotelOwner], []),
+  'registerCustomer' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [Customer],
+      [],
+    ),
   'registerOwner' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [HotelOwner],
       [],
     ),
   'rejectProperty' : IDL.Func([IDL.Text], [], []),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'submitProperty' : IDL.Func(
       [
         IDL.Text,
@@ -147,11 +190,8 @@ export const idlService = IDL.Service({
       [Property],
       [],
     ),
-  'uploadImage' : IDL.Func(
-      [IDL.Text, IDL.Text, ExternalBlob],
-      [GalleryImage],
-      [],
-    ),
+  'updateBookingStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'updateCustomerPassword' : IDL.Func([IDL.Text, IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
@@ -168,11 +208,18 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const Booking = IDL.Record({
     'id' : IDL.Text,
+    'status' : IDL.Text,
     'checkin' : IDL.Text,
     'stayName' : IDL.Text,
     'createdAt' : IDL.Int,
+    'propertyId' : IDL.Text,
     'guestName' : IDL.Text,
     'email' : IDL.Text,
     'checkout' : IDL.Text,
@@ -197,17 +244,22 @@ export const idlFactory = ({ IDL }) => {
     'checkoutTime' : IDL.Text,
     'contactPhone' : IDL.Text,
   });
-  const Category = IDL.Record({ 'name' : IDL.Text, 'description' : IDL.Text });
-  const ExternalBlob = IDL.Vec(IDL.Nat8);
-  const GalleryImage = IDL.Record({
-    'id' : IDL.Nat,
-    'title' : IDL.Text,
-    'blob' : ExternalBlob,
-    'description' : IDL.Text,
-    'timestamp' : IDL.Int,
+  const Customer = IDL.Record({
+    'active' : IDL.Bool,
+    'password' : IDL.Text,
+    'name' : IDL.Text,
+    'email' : IDL.Text,
+    'phone' : IDL.Text,
   });
   const HotelOwner = IDL.Record({
+    'active' : IDL.Bool,
     'password' : IDL.Text,
+    'name' : IDL.Text,
+    'email' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const UserProfile = IDL.Record({
+    'userType' : IDL.Text,
     'name' : IDL.Text,
     'email' : IDL.Text,
     'phone' : IDL.Text,
@@ -240,10 +292,12 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-    'addCategory' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'approveProperty' : IDL.Func([IDL.Text], [], []),
+    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'createBooking' : IDL.Func(
         [
+          IDL.Text,
           IDL.Text,
           IDL.Text,
           IDL.Text,
@@ -256,24 +310,60 @@ export const idlFactory = ({ IDL }) => {
         [Booking],
         [],
       ),
-    'deleteCategory' : IDL.Func([IDL.Text], [], []),
-    'deleteImage' : IDL.Func([IDL.Nat], [], []),
+    'deleteBooking' : IDL.Func([IDL.Text], [], []),
+    'deleteCustomer' : IDL.Func([IDL.Text], [], []),
+    'deleteOwner' : IDL.Func([IDL.Text], [], []),
+    'deleteProperty' : IDL.Func([IDL.Text], [], []),
+    'disableCustomer' : IDL.Func([IDL.Text], [], []),
+    'disableOwner' : IDL.Func([IDL.Text], [], []),
+    'enableCustomer' : IDL.Func([IDL.Text], [], []),
+    'enableOwner' : IDL.Func([IDL.Text], [], []),
     'getAllApprovedProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
     'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
-    'getAllCategories' : IDL.Func([], [IDL.Vec(Category)], ['query']),
-    'getAllImages' : IDL.Func([], [IDL.Vec(GalleryImage)], ['query']),
+    'getAllCustomers' : IDL.Func([], [IDL.Vec(Customer)], ['query']),
+    'getAllOwners' : IDL.Func([], [IDL.Vec(HotelOwner)], ['query']),
     'getAllPendingProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
-    'getBooking' : IDL.Func([IDL.Text], [Booking], ['query']),
-    'getCategory' : IDL.Func([IDL.Text], [Category], ['query']),
-    'getImage' : IDL.Func([IDL.Nat], [GalleryImage], ['query']),
-    'getMyProperties' : IDL.Func([IDL.Text], [IDL.Vec(Property)], ['query']),
+    'getAllProperties' : IDL.Func([], [IDL.Vec(Property)], ['query']),
+    'getBookingById' : IDL.Func([IDL.Text], [Booking], ['query']),
+    'getBookingsByCustomerEmail' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(Booking)],
+        ['query'],
+      ),
+    'getBookingsByPropertyId' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(Booking)],
+        ['query'],
+      ),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getCustomerByEmail' : IDL.Func([IDL.Text], [Customer], ['query']),
+    'getPropertiesByOwner' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(Property)],
+        ['query'],
+      ),
+    'getPropertyById' : IDL.Func([IDL.Text], [Property], ['query']),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
+    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'loginCustomer' : IDL.Func([IDL.Text, IDL.Text], [Customer], []),
     'loginOwner' : IDL.Func([IDL.Text, IDL.Text], [HotelOwner], []),
+    'registerCustomer' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [Customer],
+        [],
+      ),
     'registerOwner' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [HotelOwner],
         [],
       ),
     'rejectProperty' : IDL.Func([IDL.Text], [], []),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'submitProperty' : IDL.Func(
         [
           IDL.Text,
@@ -293,11 +383,8 @@ export const idlFactory = ({ IDL }) => {
         [Property],
         [],
       ),
-    'uploadImage' : IDL.Func(
-        [IDL.Text, IDL.Text, ExternalBlob],
-        [GalleryImage],
-        [],
-      ),
+    'updateBookingStatus' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'updateCustomerPassword' : IDL.Func([IDL.Text, IDL.Text], [], []),
   });
 };
 

@@ -77,14 +77,14 @@ interface AuthContextValue extends AuthState {
     emailOrPhone: string,
     newPassword: string,
   ) => Promise<boolean>;
-  checkCustomerExists: (emailOrPhone: string) => boolean;
+  checkCustomerExists: (emailOrPhone: string) => Promise<boolean>;
   checkHotelOwnerExists: (emailOrPhone: string) => boolean;
   getAdminAccounts: () => AdminAccount[];
   getAllUsers: () => RegisteredCustomer[];
   getAllOwners: () => RegisteredOwner[];
-  disableUser: (email: string) => void;
-  enableUser: (email: string) => void;
-  deleteUser: (email: string) => void;
+  disableUser: (email: string) => Promise<void>;
+  enableUser: (email: string) => Promise<void>;
+  deleteUser: (email: string) => Promise<void>;
   setHotelOwner: (owner: HotelOwner | null) => void;
   logout: () => void;
 }
@@ -92,6 +92,7 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const STORAGE_KEY = "hidestay_auth";
+// NOTE: CUSTOMERS_KEY localStorage is kept as fallback cache only — backend is source of truth
 const CUSTOMERS_KEY = "hidestay_customers";
 const HOTEL_OWNERS_KEY = "hidestay_hotel_owners";
 const ADMINS_KEY = "hidestay_admins";
@@ -107,7 +108,7 @@ const DEFAULT_ROOT_PASSWORD = "Bablu@1003";
 const DEMO_OWNER_EMAIL = "owner@hidestay.com";
 const DEMO_OWNER_DEFAULT_PASSWORD = "hotel123";
 
-function getRegisteredCustomers(): RegisteredCustomer[] {
+function getLocalCustomerCache(): RegisteredCustomer[] {
   try {
     const saved = localStorage.getItem(CUSTOMERS_KEY);
     if (saved) return JSON.parse(saved);
@@ -117,7 +118,7 @@ function getRegisteredCustomers(): RegisteredCustomer[] {
   return [];
 }
 
-function saveRegisteredCustomers(customers: RegisteredCustomer[]) {
+function saveLocalCustomerCache(customers: RegisteredCustomer[]) {
   localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
 }
 
@@ -193,9 +194,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { role: null, user: null, hotelOwner: null };
   });
 
+  // Customer list state — initialized from local cache, refreshed from backend
+  const [customers, setCustomers] = useState<RegisteredCustomer[]>(() =>
+    getLocalCustomerCache(),
+  );
+
+  // Owner list state — initialized from local cache, refreshed from backend
+  const [ownersCache, setOwnersCache] = useState<RegisteredOwner[]>(() =>
+    getLocalOwnerCache(),
+  );
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Sync customer and owner lists from backend on mount
+  useEffect(() => {
+    createActorWithConfig()
+      .then(async (actor) => {
+        try {
+          const backendCustomers = await actor.getAllCustomers();
+          const mapped: RegisteredCustomer[] = backendCustomers.map((c) => ({
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            password: "",
+            disabled: !c.active,
+            createdAt: new Date().toISOString(),
+          }));
+          setCustomers(mapped);
+          saveLocalCustomerCache(mapped);
+        } catch {
+          // backend unavailable, use local cache as-is
+        }
+
+        try {
+          const backendOwners = await actor.getAllOwners();
+          const mapped: RegisteredOwner[] = backendOwners.map((o) => ({
+            name: o.name,
+            email: o.email,
+            phone: o.phone,
+            password: "",
+            disabled: !o.active,
+            createdAt: new Date().toISOString(),
+          }));
+          // Always include demo owner if not in backend list
+          const hasDemo = mapped.some((o) => o.email === DEMO_OWNER_EMAIL);
+          const demoOwner: RegisteredOwner = {
+            name: "Hotel Owner",
+            email: DEMO_OWNER_EMAIL,
+            phone: "9876543210",
+            password: "",
+            createdAt: "2026-01-01T00:00:00.000Z",
+          };
+          const finalOwners = hasDemo ? mapped : [demoOwner, ...mapped];
+          setOwnersCache(finalOwners);
+          saveLocalOwnerCache(finalOwners);
+        } catch {
+          // backend unavailable, use local cache as-is
+        }
+      })
+      .catch(() => {
+        // ignore actor creation errors
+      });
+  }, []);
 
   const loginCustomer = async (
     emailOrPhone: string,
@@ -203,9 +265,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     if (!emailOrPhone.trim() || !password.trim()) return false;
 
-    const customers = getRegisteredCustomers();
+    // Try backend authentication first
+    try {
+      const actor = await createActorWithConfig();
+      // Backend only supports email login — try email directly
+      if (emailOrPhone.includes("@")) {
+        const customer = await actor.loginCustomer(emailOrPhone, password);
+        if (!customer.active) return false;
+        setState({
+          role: "customer",
+          user: { name: customer.name, email: customer.email },
+          hotelOwner: null,
+        });
+        return true;
+      }
+      // Phone login — try to find customer by iterating local cache
+      const localMatch = customers.find((c) => c.phone === emailOrPhone);
+      if (localMatch) {
+        const customer = await actor.loginCustomer(localMatch.email, password);
+        if (!customer.active) return false;
+        setState({
+          role: "customer",
+          user: { name: customer.name, email: customer.email },
+          hotelOwner: null,
+        });
+        return true;
+      }
+    } catch {
+      // Backend failed or invalid credentials — fall through to local fallback
+    }
 
+    // Fallback: local cache authentication
     if (customers.length === 0) {
+      // No customers registered at all — allow graceful access
       const name = emailOrPhone.includes("@")
         ? emailOrPhone.split("@")[0]
         : `Guest ${emailOrPhone.slice(-4)}`;
@@ -255,6 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
           phone: "",
           password: "",
+          active: true,
         };
         setState({
           role: "hotel_owner",
@@ -268,10 +361,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Check password override first
     const overridePassword = overrides[email.toLowerCase()];
-    if (overridePassword && overridePassword !== password) {
-      // If there's an override and it doesn't match, reject immediately
-      // unless we should also check backend - try backend below
-    }
     if (overridePassword && overridePassword === password) {
       // Password override matches - authenticate via local cache or backend
       const cachedOwners = getLocalOwnerCache();
@@ -284,6 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: cachedMatch.email,
           phone: cachedMatch.phone,
           password: "",
+          active: !cachedMatch.disabled,
         };
         setState({
           role: "hotel_owner",
@@ -298,7 +388,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const actor = await createActorWithConfig();
       const owner = await actor.loginOwner(email, password);
-      // Success - update local cache
+      if (!owner.active) return false;
+      // Update local cache
       const cachedOwners = getLocalOwnerCache();
       const existingIdx = cachedOwners.findIndex(
         (o) => o.email === owner.email,
@@ -308,7 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: owner.name,
           email: owner.email,
           phone: owner.phone,
-          password: "", // Don't cache password
+          password: "",
           createdAt: new Date().toISOString(),
         });
         saveLocalOwnerCache(cachedOwners);
@@ -318,6 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: owner.email,
         phone: owner.phone,
         password: "",
+        active: true,
       };
       setState({
         role: "hotel_owner",
@@ -344,6 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: match.email,
         phone: match.phone,
         password: "",
+        active: true,
       };
       setState({
         role: "hotel_owner",
@@ -408,21 +501,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone: string,
     password: string,
   ): Promise<boolean> => {
-    const customers = getRegisteredCustomers();
+    // Check local cache for immediate duplicate detection
     const exists = customers.find(
       (c) => c.email === email || c.phone === phone,
     );
     if (exists) return false;
-    customers.push({
-      name,
-      email,
-      phone,
-      password,
-      createdAt: new Date().toISOString(),
-    });
-    saveRegisteredCustomers(customers);
-    setState({ role: "customer", user: { name, email }, hotelOwner: null });
-    return true;
+
+    // Try to register in backend first (permanent storage)
+    try {
+      const actor = await createActorWithConfig();
+      const customer = await actor.registerCustomer(
+        name,
+        email,
+        phone,
+        password,
+      );
+      // Update local state cache
+      const newCustomer: RegisteredCustomer = {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        password: "",
+        disabled: !customer.active,
+        createdAt: new Date().toISOString(),
+      };
+      setCustomers((prev) => {
+        const updated = [...prev, newCustomer];
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      setState({ role: "customer", user: { name, email }, hotelOwner: null });
+      return true;
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (msg.toLowerCase().includes("already")) {
+        return false;
+      }
+      // Backend unavailable — fallback to local storage
+      console.warn("Backend unavailable, registering locally:", msg);
+      const newCustomer: RegisteredCustomer = {
+        name,
+        email,
+        phone,
+        password,
+        createdAt: new Date().toISOString(),
+      };
+      setCustomers((prev) => {
+        const updated = [...prev, newCustomer];
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      setState({ role: "customer", user: { name, email }, hotelOwner: null });
+      return true;
+    }
   };
 
   const registerHotelOwner = async (
@@ -451,22 +582,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: owner.name,
         email: owner.email,
         phone: owner.phone,
-        password: "", // Don't store password in cache
+        password: "",
         createdAt: new Date().toISOString(),
       };
       cachedOwners.push(newOwner);
       saveLocalOwnerCache(cachedOwners);
+      setOwnersCache([...cachedOwners]);
 
       return { success: true, owner: newOwner };
     } catch (err: any) {
-      // If backend says email already registered, treat as duplicate
       const msg = String(err?.message || err);
       if (msg.toLowerCase().includes("already")) {
         return { success: false };
       }
 
       // Backend unavailable - fallback to local-only registration
-      console.warn("Backend unavailable, registering locally:", msg);
+      console.warn("Backend unavailable, registering owner locally:", msg);
       const newOwner: RegisteredOwner = {
         name,
         email,
@@ -476,6 +607,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       cachedOwners.push(newOwner);
       saveLocalOwnerCache(cachedOwners);
+      setOwnersCache([...cachedOwners]);
       return { success: true, owner: newOwner };
     }
   };
@@ -516,8 +648,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const checkCustomerExists = (emailOrPhone: string): boolean => {
-    const customers = getRegisteredCustomers();
+  const checkCustomerExists = async (
+    emailOrPhone: string,
+  ): Promise<boolean> => {
+    // Try backend first
+    try {
+      const actor = await createActorWithConfig();
+      if (emailOrPhone.includes("@")) {
+        await actor.getCustomerByEmail(emailOrPhone);
+        return true;
+      }
+      // For phone, check local cache
+      const localMatch = customers.find((c) => c.phone === emailOrPhone);
+      if (localMatch) {
+        await actor.getCustomerByEmail(localMatch.email);
+        return true;
+      }
+      return false;
+    } catch {
+      // Backend failed — fall back to local cache
+    }
     if (customers.length === 0) return true;
     return customers.some(
       (c) => c.email === emailOrPhone || c.phone === emailOrPhone,
@@ -528,14 +678,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     emailOrPhone: string,
     newPassword: string,
   ): Promise<boolean> => {
-    const customers = getRegisteredCustomers();
-    if (customers.length === 0) return false;
+    // Try backend first
+    try {
+      const actor = await createActorWithConfig();
+      let email = emailOrPhone;
+      if (!emailOrPhone.includes("@")) {
+        // Phone — find email from local cache
+        const localMatch = customers.find((c) => c.phone === emailOrPhone);
+        if (!localMatch) return false;
+        email = localMatch.email;
+      }
+      await actor.updateCustomerPassword(email, newPassword);
+      // Update local cache password (for offline fallback)
+      setCustomers((prev) => {
+        const updated = prev.map((c) =>
+          c.email === email ? { ...c, password: newPassword } : c,
+        );
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      return true;
+    } catch {
+      // Fall back to local cache
+    }
     const idx = customers.findIndex(
       (c) => c.email === emailOrPhone || c.phone === emailOrPhone,
     );
     if (idx === -1) return false;
-    customers[idx].password = newPassword;
-    saveRegisteredCustomers(customers);
+    const updated = [...customers];
+    updated[idx] = { ...updated[idx], password: newPassword };
+    setCustomers(updated);
+    saveLocalCustomerCache(updated);
     return true;
   };
 
@@ -569,7 +742,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (idx !== -1) {
       cachedOwners[idx].password = newPassword;
       saveLocalOwnerCache(cachedOwners);
-      // Also clear any override
+      setOwnersCache([...cachedOwners]);
       delete overrides[key];
       saveOwnerPasswordOverrides(overrides);
       return true;
@@ -585,87 +758,121 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return getStoredAdmins();
   };
 
+  // Returns customer list from state (populated from backend on mount)
   const getAllUsers = (): RegisteredCustomer[] => {
-    return getRegisteredCustomers();
+    return customers;
   };
 
+  // Returns owner list from state (populated from backend on mount)
   const getAllOwners = (): RegisteredOwner[] => {
-    const owners = getLocalOwnerCache();
-    // Merge disabled status
     const disabledOwners = getDisabledOwners();
-    const ownersWithStatus = owners.map((o) => ({
+    return ownersCache.map((o) => ({
       ...o,
       disabled: disabledOwners.has(o.email.toLowerCase()) || o.disabled,
     }));
-    // Include demo owner
-    const demoOwner: RegisteredOwner = {
-      name: "Hotel Owner",
-      email: DEMO_OWNER_EMAIL,
-      phone: "9876543210",
-      password: "",
-      createdAt: "2026-01-01T00:00:00.000Z",
-    };
-    const hasDemo = owners.some((o) => o.email === DEMO_OWNER_EMAIL);
-    return hasDemo ? ownersWithStatus : [demoOwner, ...ownersWithStatus];
   };
 
-  const disableUser = (email: string) => {
-    // Try customers first
-    const customers = getRegisteredCustomers();
-    const cidx = customers.findIndex((c) => c.email === email);
-    if (cidx !== -1) {
-      customers[cidx].disabled = true;
-      saveRegisteredCustomers(customers);
+  const disableUser = async (email: string): Promise<void> => {
+    // Update local customer state immediately
+    const customerIdx = customers.findIndex((c) => c.email === email);
+    if (customerIdx !== -1) {
+      setCustomers((prev) => {
+        const updated = prev.map((c) =>
+          c.email === email ? { ...c, disabled: true } : c,
+        );
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      // Backend call (fire and forget for UI responsiveness)
+      try {
+        const actor = await createActorWithConfig();
+        await actor.disableCustomer(email);
+      } catch {
+        // ignore backend errors
+      }
       return;
     }
-    // Try hotel owners - use separate disabled set for backend owners
+
+    // Try hotel owners
     const disabledOwners = getDisabledOwners();
     disabledOwners.add(email.toLowerCase());
     saveDisabledOwners(disabledOwners);
-    // Also update local cache if present
-    const owners = getLocalOwnerCache();
-    const oidx = owners.findIndex((o) => o.email === email);
-    if (oidx !== -1) {
-      owners[oidx].disabled = true;
-      saveLocalOwnerCache(owners);
+    setOwnersCache((prev) =>
+      prev.map((o) => (o.email === email ? { ...o, disabled: true } : o)),
+    );
+    try {
+      const actor = await createActorWithConfig();
+      await actor.disableOwner(email);
+    } catch {
+      // ignore backend errors
     }
   };
 
-  const enableUser = (email: string) => {
-    const customers = getRegisteredCustomers();
-    const cidx = customers.findIndex((c) => c.email === email);
-    if (cidx !== -1) {
-      customers[cidx].disabled = false;
-      saveRegisteredCustomers(customers);
+  const enableUser = async (email: string): Promise<void> => {
+    const customerIdx = customers.findIndex((c) => c.email === email);
+    if (customerIdx !== -1) {
+      setCustomers((prev) => {
+        const updated = prev.map((c) =>
+          c.email === email ? { ...c, disabled: false } : c,
+        );
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      try {
+        const actor = await createActorWithConfig();
+        await actor.enableCustomer(email);
+      } catch {
+        // ignore backend errors
+      }
       return;
     }
-    // Remove from disabled owners set
+
+    // Try hotel owners
     const disabledOwners = getDisabledOwners();
     disabledOwners.delete(email.toLowerCase());
     saveDisabledOwners(disabledOwners);
-    // Also update local cache if present
-    const owners = getLocalOwnerCache();
-    const oidx = owners.findIndex((o) => o.email === email);
-    if (oidx !== -1) {
-      owners[oidx].disabled = false;
-      saveLocalOwnerCache(owners);
+    setOwnersCache((prev) =>
+      prev.map((o) => (o.email === email ? { ...o, disabled: false } : o)),
+    );
+    try {
+      const actor = await createActorWithConfig();
+      await actor.enableOwner(email);
+    } catch {
+      // ignore backend errors
     }
   };
 
-  const deleteUser = (email: string) => {
-    const customers = getRegisteredCustomers();
-    const filtered = customers.filter((c) => c.email !== email);
-    if (filtered.length !== customers.length) {
-      saveRegisteredCustomers(filtered);
+  const deleteUser = async (email: string): Promise<void> => {
+    const customerIdx = customers.findIndex((c) => c.email === email);
+    if (customerIdx !== -1) {
+      setCustomers((prev) => {
+        const updated = prev.filter((c) => c.email !== email);
+        saveLocalCustomerCache(updated);
+        return updated;
+      });
+      try {
+        const actor = await createActorWithConfig();
+        await actor.deleteCustomer(email);
+      } catch {
+        // ignore backend errors
+      }
       return;
     }
-    const owners = getLocalOwnerCache();
-    const filteredOwners = owners.filter((o) => o.email !== email);
+
+    // Try hotel owners
+    const cachedOwners = getLocalOwnerCache();
+    const filteredOwners = cachedOwners.filter((o) => o.email !== email);
     saveLocalOwnerCache(filteredOwners);
-    // Also remove from disabled set
+    setOwnersCache(filteredOwners);
     const disabledOwners = getDisabledOwners();
     disabledOwners.delete(email.toLowerCase());
     saveDisabledOwners(disabledOwners);
+    try {
+      const actor = await createActorWithConfig();
+      await actor.deleteOwner(email);
+    } catch {
+      // ignore backend errors
+    }
   };
 
   const logout = () => {

@@ -19,6 +19,7 @@ interface BookingFormProps {
   stayName: string;
   location: string;
   price: string;
+  propertyId?: string;
 }
 
 function today() {
@@ -57,6 +58,7 @@ export default function BookingForm({
   stayName,
   location,
   price,
+  propertyId = "",
 }: BookingFormProps) {
   const navigate = useNavigate();
   const { actor } = useActor();
@@ -108,6 +110,7 @@ export default function BookingForm({
       if (actor) {
         try {
           const booking = await actor.createBooking(
+            propertyId,
             stayName,
             location,
             form.checkin,
@@ -123,7 +126,7 @@ export default function BookingForm({
         }
       }
 
-      // Always save to localStorage for profile page
+      // Always save to localStorage as UI cache
       saveBookingToStorage({
         id: bookingId,
         stayName,

@@ -69,6 +69,7 @@ export default function HotelOwnerRegister() {
         email: form.email.trim(),
         phone: form.phone.trim(),
         password: "",
+        active: true,
       });
 
       toast.success("Account created! Welcome to HIDESTAY.");

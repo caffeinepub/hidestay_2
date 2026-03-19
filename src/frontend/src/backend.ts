@@ -89,9 +89,9 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface Category {
-    name: string;
-    description: string;
+export interface _CaffeineStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
 }
 export interface Property {
     id: string;
@@ -110,21 +110,16 @@ export interface Property {
     checkoutTime: string;
     contactPhone: string;
 }
-export interface GalleryImage {
-    id: bigint;
-    title: string;
-    blob: ExternalBlob;
-    description: string;
-    timestamp: bigint;
-}
 export interface _CaffeineStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
 export interface Booking {
     id: string;
+    status: string;
     checkin: string;
     stayName: string;
     createdAt: bigint;
+    propertyId: string;
     guestName: string;
     email: string;
     checkout: string;
@@ -136,15 +131,30 @@ export interface _CaffeineStorageCreateCertificateResult {
     method: string;
     blob_hash: string;
 }
-export interface HotelOwner {
+export interface Customer {
+    active: boolean;
     password: string;
     name: string;
     email: string;
     phone: string;
 }
-export interface _CaffeineStorageRefillResult {
-    success?: boolean;
-    topped_up_amount?: bigint;
+export interface UserProfile {
+    userType: string;
+    name: string;
+    email: string;
+    phone: string;
+}
+export interface HotelOwner {
+    active: boolean;
+    password: string;
+    name: string;
+    email: string;
+    phone: string;
+}
+export enum UserRole {
+    admin = "admin",
+    user = "user",
+    guest = "guest"
 }
 export interface backendInterface {
     _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
@@ -153,27 +163,45 @@ export interface backendInterface {
     _caffeineStorageCreateCertificate(blobHash: string): Promise<_CaffeineStorageCreateCertificateResult>;
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
-    addCategory(name: string, description: string): Promise<void>;
+    _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     approveProperty(id: string): Promise<void>;
-    createBooking(stayName: string, location: string, checkin: string, checkout: string, guestName: string, phone: string, email: string, guests: bigint): Promise<Booking>;
-    deleteCategory(name: string): Promise<void>;
-    deleteImage(id: bigint): Promise<void>;
+    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createBooking(propertyId: string, stayName: string, location: string, checkin: string, checkout: string, guestName: string, phone: string, email: string, guests: bigint): Promise<Booking>;
+    deleteBooking(id: string): Promise<void>;
+    deleteCustomer(email: string): Promise<void>;
+    deleteOwner(email: string): Promise<void>;
+    deleteProperty(id: string): Promise<void>;
+    disableCustomer(email: string): Promise<void>;
+    disableOwner(email: string): Promise<void>;
+    enableCustomer(email: string): Promise<void>;
+    enableOwner(email: string): Promise<void>;
     getAllApprovedProperties(): Promise<Array<Property>>;
     getAllBookings(): Promise<Array<Booking>>;
-    getAllCategories(): Promise<Array<Category>>;
-    getAllImages(): Promise<Array<GalleryImage>>;
+    getAllCustomers(): Promise<Array<Customer>>;
+    getAllOwners(): Promise<Array<HotelOwner>>;
     getAllPendingProperties(): Promise<Array<Property>>;
-    getBooking(id: string): Promise<Booking>;
-    getCategory(name: string): Promise<Category>;
-    getImage(id: bigint): Promise<GalleryImage>;
-    getMyProperties(ownerEmail: string): Promise<Array<Property>>;
+    getAllProperties(): Promise<Array<Property>>;
+    getBookingById(id: string): Promise<Booking>;
+    getBookingsByCustomerEmail(email: string): Promise<Array<Booking>>;
+    getBookingsByPropertyId(propertyId: string): Promise<Array<Booking>>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserRole(): Promise<UserRole>;
+    getCustomerByEmail(email: string): Promise<Customer>;
+    getPropertiesByOwner(ownerEmail: string): Promise<Array<Property>>;
+    getPropertyById(id: string): Promise<Property>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    isCallerAdmin(): Promise<boolean>;
+    loginCustomer(email: string, password: string): Promise<Customer>;
     loginOwner(email: string, password: string): Promise<HotelOwner>;
+    registerCustomer(name: string, email: string, phone: string, password: string): Promise<Customer>;
     registerOwner(name: string, email: string, phone: string, password: string): Promise<HotelOwner>;
     rejectProperty(id: string): Promise<void>;
+    saveCallerUserProfile(profile: UserProfile): Promise<void>;
     submitProperty(propertyName: string, propertyType: string, city: string, address: string, contactPhone: string, description: string, imageUrls: Array<string>, pricePerNight: bigint, amenities: Array<string>, rules: string, checkinTime: string, checkoutTime: string, ownerEmail: string): Promise<Property>;
-    uploadImage(title: string, description: string, blob: ExternalBlob): Promise<GalleryImage>;
+    updateBookingStatus(id: string, newStatus: string): Promise<void>;
+    updateCustomerPassword(email: string, newPassword: string): Promise<void>;
 }
-import type { ExternalBlob as _ExternalBlob, GalleryImage as _GalleryImage, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -260,17 +288,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async addCategory(arg0: string, arg1: string): Promise<void> {
+    async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addCategory(arg0, arg1);
+                const result = await this.actor._initializeAccessControlWithSecret(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addCategory(arg0, arg1);
+            const result = await this.actor._initializeAccessControlWithSecret(arg0);
             return result;
         }
     }
@@ -288,45 +316,143 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createBooking(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: bigint): Promise<Booking> {
+    async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n8(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
     }
-    async deleteCategory(arg0: string): Promise<void> {
+    async createBooking(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: string, arg8: bigint): Promise<Booking> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteCategory(arg0);
+                const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteCategory(arg0);
+            const result = await this.actor.createBooking(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
             return result;
         }
     }
-    async deleteImage(arg0: bigint): Promise<void> {
+    async deleteBooking(arg0: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteImage(arg0);
+                const result = await this.actor.deleteBooking(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteImage(arg0);
+            const result = await this.actor.deleteBooking(arg0);
+            return result;
+        }
+    }
+    async deleteCustomer(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteCustomer(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteCustomer(arg0);
+            return result;
+        }
+    }
+    async deleteOwner(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteOwner(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteOwner(arg0);
+            return result;
+        }
+    }
+    async deleteProperty(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteProperty(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteProperty(arg0);
+            return result;
+        }
+    }
+    async disableCustomer(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.disableCustomer(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.disableCustomer(arg0);
+            return result;
+        }
+    }
+    async disableOwner(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.disableOwner(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.disableOwner(arg0);
+            return result;
+        }
+    }
+    async enableCustomer(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.enableCustomer(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.enableCustomer(arg0);
+            return result;
+        }
+    }
+    async enableOwner(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.enableOwner(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.enableOwner(arg0);
             return result;
         }
     }
@@ -358,32 +484,32 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getAllCategories(): Promise<Array<Category>> {
+    async getAllCustomers(): Promise<Array<Customer>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllCategories();
+                const result = await this.actor.getAllCustomers();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllCategories();
+            const result = await this.actor.getAllCustomers();
             return result;
         }
     }
-    async getAllImages(): Promise<Array<GalleryImage>> {
+    async getAllOwners(): Promise<Array<HotelOwner>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllImages();
-                return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.getAllOwners();
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllImages();
-            return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.getAllOwners();
+            return result;
         }
     }
     async getAllPendingProperties(): Promise<Array<Property>> {
@@ -400,59 +526,171 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getBooking(arg0: string): Promise<Booking> {
+    async getAllProperties(): Promise<Array<Property>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getBooking(arg0);
+                const result = await this.actor.getAllProperties();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getBooking(arg0);
+            const result = await this.actor.getAllProperties();
             return result;
         }
     }
-    async getCategory(arg0: string): Promise<Category> {
+    async getBookingById(arg0: string): Promise<Booking> {
         if (this.processError) {
             try {
-                const result = await this.actor.getCategory(arg0);
+                const result = await this.actor.getBookingById(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getCategory(arg0);
+            const result = await this.actor.getBookingById(arg0);
             return result;
         }
     }
-    async getImage(arg0: bigint): Promise<GalleryImage> {
+    async getBookingsByCustomerEmail(arg0: string): Promise<Array<Booking>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getImage(arg0);
-                return from_candid_GalleryImage_n9(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getImage(arg0);
-            return from_candid_GalleryImage_n9(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getMyProperties(arg0: string): Promise<Array<Property>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getMyProperties(arg0);
+                const result = await this.actor.getBookingsByCustomerEmail(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getMyProperties(arg0);
+            const result = await this.actor.getBookingsByCustomerEmail(arg0);
+            return result;
+        }
+    }
+    async getBookingsByPropertyId(arg0: string): Promise<Array<Booking>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getBookingsByPropertyId(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getBookingsByPropertyId(arg0);
+            return result;
+        }
+    }
+    async getCallerUserProfile(): Promise<UserProfile | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCallerUserProfile();
+                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCallerUserProfile();
+            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getCallerUserRole(): Promise<UserRole> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCallerUserRole();
+                return from_candid_UserRole_n11(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCallerUserRole();
+            return from_candid_UserRole_n11(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getCustomerByEmail(arg0: string): Promise<Customer> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCustomerByEmail(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCustomerByEmail(arg0);
+            return result;
+        }
+    }
+    async getPropertiesByOwner(arg0: string): Promise<Array<Property>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPropertiesByOwner(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPropertiesByOwner(arg0);
+            return result;
+        }
+    }
+    async getPropertyById(arg0: string): Promise<Property> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPropertyById(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPropertyById(arg0);
+            return result;
+        }
+    }
+    async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getUserProfile(arg0);
+                return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getUserProfile(arg0);
+            return from_candid_opt_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async isCallerAdmin(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isCallerAdmin();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async loginCustomer(arg0: string, arg1: string): Promise<Customer> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.loginCustomer(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.loginCustomer(arg0, arg1);
             return result;
         }
     }
@@ -467,6 +705,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.loginOwner(arg0, arg1);
+            return result;
+        }
+    }
+    async registerCustomer(arg0: string, arg1: string, arg2: string, arg3: string): Promise<Customer> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerCustomer(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerCustomer(arg0, arg1, arg2, arg3);
             return result;
         }
     }
@@ -498,6 +750,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveCallerUserProfile(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
     async submitProperty(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: Array<string>, arg7: bigint, arg8: Array<string>, arg9: string, arg10: string, arg11: string, arg12: string): Promise<Property> {
         if (this.processError) {
             try {
@@ -512,56 +778,49 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async uploadImage(arg0: string, arg1: string, arg2: ExternalBlob): Promise<GalleryImage> {
+    async updateBookingStatus(arg0: string, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.uploadImage(arg0, arg1, await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg2));
-                return from_candid_GalleryImage_n9(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor.updateBookingStatus(arg0, arg1);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.uploadImage(arg0, arg1, await to_candid_ExternalBlob_n12(this._uploadFile, this._downloadFile, arg2));
-            return from_candid_GalleryImage_n9(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor.updateBookingStatus(arg0, arg1);
+            return result;
+        }
+    }
+    async updateCustomerPassword(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateCustomerPassword(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateCustomerPassword(arg0, arg1);
+            return result;
         }
     }
 }
-async function from_candid_ExternalBlob_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
-    return await _downloadFile(value);
-}
-async function from_candid_GalleryImage_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _GalleryImage): Promise<GalleryImage> {
-    return await from_candid_record_n10(_uploadFile, _downloadFile, value);
+function from_candid_UserRole_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n12(_uploadFile, _downloadFile, value);
 }
 function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
-}
-async function from_candid_record_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: bigint;
-    title: string;
-    blob: _ExternalBlob;
-    description: string;
-    timestamp: bigint;
-}): Promise<{
-    id: bigint;
-    title: string;
-    blob: ExternalBlob;
-    description: string;
-    timestamp: bigint;
-}> {
-    return {
-        id: value.id,
-        title: value.title,
-        blob: await from_candid_ExternalBlob_n11(_uploadFile, _downloadFile, value.blob),
-        description: value.description,
-        timestamp: value.timestamp
-    };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     success: [] | [boolean];
@@ -575,11 +834,17 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-async function from_candid_vec_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_GalleryImage>): Promise<Array<GalleryImage>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_GalleryImage_n9(_uploadFile, _downloadFile, x)));
+function from_candid_variant_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    admin: null;
+} | {
+    user: null;
+} | {
+    guest: null;
+}): UserRole {
+    return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-async function to_candid_ExternalBlob_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
-    return await _uploadFile(value);
+function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n9(_uploadFile, _downloadFile, value);
 }
 function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation): __CaffeineStorageRefillInformation {
     return to_candid_record_n3(_uploadFile, _downloadFile, value);
@@ -595,6 +860,21 @@ function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     return {
         proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
     };
+}
+function to_candid_variant_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
+    admin: null;
+} | {
+    user: null;
+} | {
+    guest: null;
+} {
+    return value == UserRole.admin ? {
+        admin: null
+    } : value == UserRole.user ? {
+        user: null
+    } : value == UserRole.guest ? {
+        guest: null
+    } : value;
 }
 export interface CreateActorOptions {
     agent?: Agent;

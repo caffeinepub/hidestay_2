@@ -1,28 +1,36 @@
 # HIDESTAY
 
 ## Current State
-- Super Admin login page has a single form: email/phone + password, hardcoded root credentials (`admin@hidestay.com / admin123`).
-- Super Admin dashboard has Bookings, Property Approvals, and Approved Properties tabs.
-- No way to create additional admin accounts.
-- No forgot/reset password flow.
+- Hotel Owner registration: saved in ICP backend (Motoko canister) -- permanent
+- Customer registration: saved in localStorage only -- resets when code changes
+- Bookings: saved in both backend and localStorage but backend Booking type has no status or propertyId
+- Properties: saved in backend -- permanent
+- All other data (platform settings, activity log, featured hotels, reviews, virtual tours) stored in localStorage
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Forgot Password flow** on login page: a link below the login form reveals a two-step panel — first verify identity (email or phone must match a stored admin account), then set a new password.
-- **Admin Accounts tab** inside the Super Admin dashboard (logged-in admins only): displays all admin accounts and includes a "Create Admin Account" form with Name, Email, Phone, Password fields.
-- `registerAdminAccount` and `resetAdminPassword` functions in AuthContext.
-- Admin accounts stored in localStorage (`hidestay_admins`); root admin is always valid but its password can be reset.
+- Backend: `Customer` type with registerCustomer, loginCustomer, getCustomerByEmail, updateCustomerPassword functions
+- Backend: `BookingStatus` field on Booking type (pending/confirmed/cancelled/completed)
+- Backend: `propertyId` field on Booking type
+- Backend: `getBookingsByEmail` query to fetch all bookings for a customer
+- Backend: `updateBookingStatus` function for Super Admin actions
+- Frontend: AuthContext updated to register/login customers via backend canister
+- Frontend: BookingForm updated to always save booking to backend with propertyId and status
+- Frontend: ProfilePage updated to load bookings from backend by customer email
 
 ### Modify
-- `loginSuperAdmin` in AuthContext to check both root admin and stored admin accounts.
-- `SuperAdminLogin` page to support three views: `login`, `forgot`, `reset`.
-- `SuperAdmin` dashboard to include a new "Admin Accounts" tab.
+- Backend: Booking type extended with status (Text) and propertyId (Text) fields
+- Frontend: AuthContext loginCustomer and registerCustomer to call backend first, with localStorage as session cache only
+- Frontend: BookingForm to pass propertyId when creating booking
 
 ### Remove
-- Nothing removed.
+- Frontend: localStorage as primary data store for customer accounts (keep only as session cache)
+- Frontend: hidestay_customers localStorage key as source of truth
 
 ## Implementation Plan
-1. Update `AuthContext.tsx`: add admin accounts storage, update `loginSuperAdmin`, add `registerAdminAccount` and `resetAdminPassword`.
-2. Update `SuperAdminLogin.tsx`: add Forgot Password link, forgot/reset views.
-3. Update `SuperAdmin.tsx`: add Admin Accounts tab with list and create form.
+1. Regenerate Motoko backend with Customer type (registerCustomer, loginCustomer, getCustomerByEmail, updateCustomerPassword, disableCustomer, enableCustomer, deleteCustomer) and updated Booking type with status + propertyId + getBookingsByEmail + updateBookingStatus
+2. Update AuthContext: registerCustomer calls backend canister, loginCustomer calls backend canister with localStorage session cache fallback
+3. Update BookingForm: always calls backend createBooking with status and propertyId, localStorage saved only as UI cache
+4. Update ProfilePage: loads bookings from backend via getBookingsByEmail
+5. Update SuperAdmin booking management to use updateBookingStatus on backend

@@ -20,36 +20,43 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-function getLocalBookings(): Booking[] {
+function getLocalBookings(email: string): Booking[] {
   try {
     const raw = localStorage.getItem("hidestay_bookings");
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return parsed.map(
-      (b: {
-        id: string;
-        stayName: string;
-        location: string;
-        checkin: string;
-        checkout: string;
-        guestName: string;
-        phone: string;
-        email: string;
-        guests: number;
-        createdAt: number;
-      }) => ({
-        id: b.id,
-        stayName: b.stayName,
-        location: b.location,
-        checkin: b.checkin,
-        checkout: b.checkout,
-        guestName: b.guestName,
-        phone: b.phone,
-        email: b.email,
-        guests: BigInt(b.guests || 1),
-        createdAt: BigInt(b.createdAt || Date.now()),
-      }),
-    );
+    return parsed
+      .filter(
+        (b: { email?: string }) =>
+          (b.email || "").toLowerCase() === email.toLowerCase(),
+      )
+      .map(
+        (b: {
+          id: string;
+          stayName: string;
+          location: string;
+          checkin: string;
+          checkout: string;
+          guestName: string;
+          phone: string;
+          email: string;
+          guests: number;
+          createdAt: number;
+        }) => ({
+          id: b.id,
+          stayName: b.stayName,
+          location: b.location,
+          checkin: b.checkin,
+          checkout: b.checkout,
+          guestName: b.guestName,
+          phone: b.phone,
+          email: b.email,
+          guests: BigInt(b.guests || 1),
+          createdAt: BigInt(b.createdAt || Date.now()),
+          status: "pending",
+          propertyId: "",
+        }),
+      );
   } catch {
     return [];
   }
@@ -63,31 +70,32 @@ export default function ProfilePage() {
   const [searched, setSearched] = useState(false);
 
   const { data: backendBookings = [] } = useQuery<Booking[]>({
-    queryKey: ["allBookings"],
+    queryKey: ["customerBookings", user?.email],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor || !user?.email) return [];
       try {
-        return await actor.getAllBookings();
+        return await actor.getBookingsByCustomerEmail(user.email);
       } catch {
         return [];
       }
     },
-    enabled: !!actor && role === "customer",
+    enabled: !!actor && role === "customer" && !!user?.email,
   });
 
   // Merge backend bookings with localStorage bookings (deduplicate by id)
-  const allBookings = (() => {
-    const local = getLocalBookings();
+  const myBookings = (() => {
+    const local = user?.email ? getLocalBookings(user.email) : [];
     const backendIds = new Set(backendBookings.map((b) => b.id));
     const uniqueLocal = local.filter((b) => !backendIds.has(b.id));
     return [...backendBookings, ...uniqueLocal];
   })();
 
-  const myBookings = allBookings.filter(
-    (b) => b.email.toLowerCase() === (user?.email || "").toLowerCase(),
-  );
-
   const getBookingStatus = (booking: Booking): string => {
+    // Use backend status if it's a terminal state
+    if (booking.status === "cancelled") return "Cancelled";
+    if (booking.status === "completed") return "Completed";
+
+    // Compute from dates for pending/confirmed
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const checkout = new Date(booking.checkout);
@@ -327,7 +335,9 @@ export default function ProfilePage() {
                                 ? "text-emerald-600"
                                 : status === "Active"
                                   ? "text-blue-600"
-                                  : "text-amber-600"
+                                  : status === "Cancelled"
+                                    ? "text-red-500"
+                                    : "text-amber-600"
                             }`}
                           >
                             {status === "Upcoming" ? (
