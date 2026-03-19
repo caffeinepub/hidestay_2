@@ -1,5 +1,9 @@
+import type { Property } from "@/backend";
+import StayVerseSection from "@/components/StayVerseSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useActor } from "@/hooks/useActor";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Building2,
@@ -62,41 +66,23 @@ function TopStaysSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const MOCK_PROPERTIES = [
-    {
-      id: "prop-001",
-      propertyName: "The Mountain Retreat",
-      city: "Rishikesh",
-      pricePerNight: 4500,
-      rating: 4.8,
-      imageUrl: "/assets/generated/category-resorts.dim_600x400.jpg",
-      type: "Resort",
+  const { actor } = useActor();
+  const { data: approvedProperties = [] } = useQuery<Property[]>({
+    queryKey: ["approvedProperties"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllApprovedProperties();
     },
-    {
-      id: "prop-002",
-      propertyName: "Valley View Homestay",
-      city: "Mussoorie",
-      pricePerNight: 2800,
-      rating: 4.6,
-      imageUrl: "/assets/generated/category-homestays.dim_600x400.jpg",
-      type: "Homestay",
-    },
-    {
-      id: "prop-003",
-      propertyName: "Lake View Guest House",
-      city: "Nainital",
-      pricePerNight: 3200,
-      rating: 4.7,
-      imageUrl: "/assets/generated/category-guesthouses.dim_600x400.jpg",
-      type: "Guest House",
-    },
-  ];
+    enabled: !!actor,
+  });
 
+  // Only show properties that have been explicitly marked as featured by Super Admin
   const featuredProperties =
     featuredIds.length > 0
-      ? MOCK_PROPERTIES.filter((p) => featuredIds.includes(p.id))
-      : MOCK_PROPERTIES;
+      ? approvedProperties.filter((p) => featuredIds.includes(p.id))
+      : [];
 
+  // Don't render the section at all if there are no featured properties
   if (featuredProperties.length === 0) return null;
 
   return (
@@ -126,11 +112,17 @@ function TopStaysSection() {
             className="group cursor-pointer rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 bg-white border border-gray-100"
           >
             <div className="relative h-48 overflow-hidden">
-              <img
-                src={prop.imageUrl}
-                alt={prop.propertyName}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+              {prop.imageUrls.length > 0 ? (
+                <img
+                  src={prop.imageUrls[0]}
+                  alt={prop.propertyName}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#1F7A4C]/10 flex items-center justify-center">
+                  <MapPin className="w-8 h-8 text-[#1F7A4C]/30" />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute top-3 left-3">
                 <span className="bg-[#FF9933] text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
@@ -150,15 +142,13 @@ function TopStaysSection() {
             <div className="p-3 flex items-center justify-between">
               <div>
                 <span className="text-[#1F7A4C] font-bold text-base">
-                  ₹{prop.pricePerNight.toLocaleString("en-IN")}
+                  ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}
                 </span>
                 <span className="text-gray-400 text-xs"> / night</span>
               </div>
               <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full">
                 <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                <span className="text-xs font-semibold text-gray-700">
-                  {prop.rating}
-                </span>
+                <span className="text-xs font-semibold text-gray-700">4.8</span>
               </div>
             </div>
           </motion.div>
@@ -412,8 +402,11 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Top Stays / Featured Hotels */}
+        {/* Top Stays / Featured Hotels - only shown when real featured properties exist */}
         <TopStaysSection />
+
+        {/* StayVerse Section - only shown when real approved virtual tours exist */}
+        <StayVerseSection />
 
         {/* Features row */}
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">

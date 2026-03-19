@@ -1,9 +1,12 @@
+import type { Property } from "@/backend";
 import BookingForm from "@/components/BookingForm";
 import PropertyMap from "@/components/PropertyMap";
 import ReviewsSection from "@/components/ReviewsSection";
 import VirtualTourSection from "@/components/VirtualTourSection";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { useActor } from "@/hooks/useActor";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -87,12 +90,26 @@ export default function StayDetails() {
   const rating = Number(search.rating ?? 4.8);
   const openReview = (search as Record<string, string>).review === "true";
 
-  const images = [
-    `https://picsum.photos/seed/${id}a/900/600`,
-    `https://picsum.photos/seed/${id}b/900/600`,
-    `https://picsum.photos/seed/${id}c/900/600`,
-    `https://picsum.photos/seed/${id}d/900/600`,
-  ];
+  const { actor } = useActor();
+  const { data: property } = useQuery<Property | null>({
+    queryKey: ["property", id],
+    queryFn: async () => {
+      if (!actor) return null;
+      const all = await actor.getAllApprovedProperties();
+      return all.find((p) => p.id === id) ?? null;
+    },
+    enabled: !!actor && !!id,
+  });
+
+  const images =
+    property && property.imageUrls.length > 0
+      ? property.imageUrls
+      : [
+          `https://picsum.photos/seed/${id}a/900/600`,
+          `https://picsum.photos/seed/${id}b/900/600`,
+          `https://picsum.photos/seed/${id}c/900/600`,
+          `https://picsum.photos/seed/${id}d/900/600`,
+        ];
 
   const [activeImg, setActiveImg] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -225,7 +242,7 @@ export default function StayDetails() {
             About this Stay
           </h2>
           <p className="text-muted-foreground font-body leading-relaxed text-sm sm:text-base">
-            {getDescription(category, name)}
+            {property?.description || getDescription(category, name)}
           </p>
         </motion.section>
 
@@ -241,15 +258,36 @@ export default function StayDetails() {
             Amenities
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {AMENITIES.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-2.5 bg-accent/60 border border-primary/15 rounded-xl px-3 py-3 text-sm font-body text-foreground"
-              >
-                <Icon className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-xs font-medium">{label}</span>
-              </div>
-            ))}
+            {(property && property.amenities.length > 0
+              ? property.amenities
+              : AMENITIES.map(({ label }) => label)
+            ).map((amenityLabel) => {
+              const matched = AMENITIES.find(
+                (a) =>
+                  a.label.toLowerCase() ===
+                  (typeof amenityLabel === "string"
+                    ? amenityLabel.toLowerCase()
+                    : ""),
+              );
+              const Icon = matched ? matched.icon : Sparkles;
+              return (
+                <div
+                  key={
+                    typeof amenityLabel === "string"
+                      ? amenityLabel
+                      : String(amenityLabel)
+                  }
+                  className="flex items-center gap-2.5 bg-accent/60 border border-primary/15 rounded-xl px-3 py-3 text-sm font-body text-foreground"
+                >
+                  <Icon className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span className="text-xs font-medium">
+                    {typeof amenityLabel === "string"
+                      ? amenityLabel
+                      : String(amenityLabel)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </motion.section>
 
@@ -280,7 +318,7 @@ export default function StayDetails() {
               Check-in
             </p>
             <p className="font-display font-bold text-foreground text-xl">
-              2:00 PM
+              {property?.checkinTime || "2:00 PM"}
             </p>
           </div>
           <div
@@ -294,7 +332,7 @@ export default function StayDetails() {
               Check-out
             </p>
             <p className="font-display font-bold text-foreground text-xl">
-              11:00 AM
+              {property?.checkoutTime || "11:00 AM"}
             </p>
           </div>
         </motion.div>
@@ -326,7 +364,10 @@ export default function StayDetails() {
           </h2>
           <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
             <ul className="space-y-3">
-              {RULES.map((rule) => (
+              {(property?.rules
+                ? property.rules.split("\n").filter(Boolean)
+                : RULES
+              ).map((rule) => (
                 <li
                   key={rule}
                   className="flex items-start gap-2.5 font-body text-sm text-foreground"

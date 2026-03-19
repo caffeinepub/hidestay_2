@@ -3,15 +3,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
-import { useActor } from "@/hooks/useActor";
 import { useNavigate } from "@tanstack/react-router";
 import { Building2, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function HotelOwnerRegister() {
-  const { loginHotelOwnerWithData } = useAuth();
-  const { actor } = useActor();
+  const { registerHotelOwner, loginHotelOwnerWithData } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -53,14 +51,26 @@ export default function HotelOwnerRegister() {
 
     setLoading(true);
     try {
-      if (!actor) throw new Error("Not connected");
-      const owner = await actor.registerOwner(
+      const result = await registerHotelOwner(
         form.name.trim(),
         form.email.trim(),
         form.phone.trim(),
         form.password,
       );
-      loginHotelOwnerWithData(owner);
+
+      if (!result.success) {
+        setError("An account with this email or phone already exists.");
+        return;
+      }
+
+      // Log the owner in immediately after registration
+      loginHotelOwnerWithData({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: "",
+      });
+
       toast.success("Account created! Welcome to HIDESTAY.");
       navigate({ to: "/hotel-admin" });
     } catch (err: any) {

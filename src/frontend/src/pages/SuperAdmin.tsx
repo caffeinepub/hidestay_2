@@ -78,44 +78,6 @@ interface ActivityLogEntry {
   timestamp: string;
 }
 
-const SAMPLE_ACTIVITY_LOG: ActivityLogEntry[] = [
-  {
-    id: "log-001",
-    action: "Property 'Mountain Dew Resort' approved",
-    category: "property",
-    adminName: "HIDESTAY Admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: "log-002",
-    action: "Property 'Lake View Guest House' marked as Featured",
-    category: "featured",
-    adminName: "HIDESTAY Admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-  {
-    id: "log-003",
-    action: "Booking HIDE-20260301-1421 confirmed",
-    category: "booking",
-    adminName: "HIDESTAY Admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-  },
-  {
-    id: "log-004",
-    action: "User account rahul.verma@email.com disabled",
-    category: "user",
-    adminName: "HIDESTAY Admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-  {
-    id: "log-005",
-    action: "Property 'Old Heritage Inn' rejected",
-    category: "property",
-    adminName: "HIDESTAY Admin",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
-  },
-];
-
 function getActivityLog(): ActivityLogEntry[] {
   try {
     const stored = localStorage.getItem(ACTIVITY_LOG_KEY);
@@ -123,11 +85,10 @@ function getActivityLog(): ActivityLogEntry[] {
       const parsed = JSON.parse(stored) as ActivityLogEntry[];
       return parsed;
     }
-    // Seed with sample data on first load
-    localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(SAMPLE_ACTIVITY_LOG));
-    return SAMPLE_ACTIVITY_LOG;
+    // Start with empty log
+    return [];
   } catch {
-    return SAMPLE_ACTIVITY_LOG;
+    return [];
   }
 }
 
@@ -169,99 +130,6 @@ interface AdminBooking {
   status: BookingStatus;
   paymentType: string;
 }
-
-const MOCK_BOOKINGS: AdminBooking[] = [
-  {
-    id: "HIDE-20260301-1421",
-    guest: "Priya Sharma",
-    guestPhone: "+91 98765 43210",
-    guestEmail: "priya.sharma@email.com",
-    stay: "Mountain Dew Resort",
-    stayLocation: "Mussoorie, Uttarakhand",
-    checkIn: "2026-03-05",
-    checkOut: "2026-03-08",
-    bookingDate: "2026-03-01",
-    guests: 2,
-    amount: "₹13,500",
-    status: "Confirmed",
-    paymentType: "Pay at Hotel",
-  },
-  {
-    id: "HIDE-20260303-2834",
-    guest: "Rahul Verma",
-    guestPhone: "+91 91234 56789",
-    guestEmail: "rahul.verma@email.com",
-    stay: "Green Valley Homestay",
-    stayLocation: "Rishikesh, Uttarakhand",
-    checkIn: "2026-03-10",
-    checkOut: "2026-03-13",
-    bookingDate: "2026-03-03",
-    guests: 3,
-    amount: "₹3,600",
-    status: "Confirmed",
-    paymentType: "Pay at Hotel",
-  },
-  {
-    id: "HIDE-20260305-3910",
-    guest: "Anjali Patel",
-    guestPhone: "+91 87654 32109",
-    guestEmail: "anjali.patel@email.com",
-    stay: "City Hub Hotel",
-    stayLocation: "Dehradun, Uttarakhand",
-    checkIn: "2026-03-15",
-    checkOut: "2026-03-18",
-    bookingDate: "2026-03-05",
-    guests: 1,
-    amount: "₹9,600",
-    status: "Pending",
-    paymentType: "Pay at Hotel",
-  },
-  {
-    id: "HIDE-20260307-4512",
-    guest: "Vikram Singh",
-    guestPhone: "+91 99887 76655",
-    guestEmail: "vikram.singh@email.com",
-    stay: "Azure Bay Resort",
-    stayLocation: "Nainital, Uttarakhand",
-    checkIn: "2026-03-20",
-    checkOut: "2026-03-25",
-    bookingDate: "2026-03-07",
-    guests: 4,
-    amount: "₹63,998",
-    status: "Confirmed",
-    paymentType: "Pay at Hotel",
-  },
-  {
-    id: "HIDE-20260309-5671",
-    guest: "Meera Nair",
-    guestPhone: "+91 76543 21098",
-    guestEmail: "meera.nair@email.com",
-    stay: "Grandma Rosa's Cottage",
-    stayLocation: "Lansdowne, Uttarakhand",
-    checkIn: "2026-03-01",
-    checkOut: "2026-03-04",
-    bookingDate: "2026-02-25",
-    guests: 2,
-    amount: "₹6,299",
-    status: "Completed",
-    paymentType: "Pay at Hotel",
-  },
-  {
-    id: "HIDE-20260310-6789",
-    guest: "Arjun Mehta",
-    guestPhone: "+91 82345 67890",
-    guestEmail: "arjun.mehta@email.com",
-    stay: "Himalayan Hideaway",
-    stayLocation: "Chakrata, Uttarakhand",
-    checkIn: "2026-03-22",
-    checkOut: "2026-03-24",
-    bookingDate: "2026-03-10",
-    guests: 2,
-    amount: "₹8,400",
-    status: "Pending",
-    paymentType: "Pay at Hotel",
-  },
-];
 
 const ANALYTICS_STATS = [
   {
@@ -602,7 +470,7 @@ function PropertyDetailView({
 }
 
 function BookingsTab() {
-  const [bookings, setBookings] = useState<AdminBooking[]>(MOCK_BOOKINGS);
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(
     null,
   );
@@ -1494,86 +1362,6 @@ function AdminAccountsTab() {
 }
 
 // ---- USERS TAB ----
-const MOCK_OWNER_PROPERTIES: Property[] = [
-  {
-    id: "prop-001",
-    ownerEmail: "owner@hidestay.com",
-    status: "approved",
-    propertyName: "The Mountain Retreat",
-    propertyType: "Resort",
-    imageUrls: ["/assets/generated/hero-alpine-valley.dim_1200x800.jpg"],
-    checkinTime: "2:00 PM",
-    checkoutTime: "11:00 AM",
-    city: "Rishikesh",
-    pricePerNight: BigInt(4500),
-    description:
-      "A serene mountain retreat nestled in the foothills of Rishikesh with breathtaking views of the Ganges.",
-    amenities: ["WiFi", "Breakfast", "Parking", "River View"],
-    address: "23, Tapovan Road, Rishikesh, Uttarakhand",
-    rules: "No smoking. No pets. Check-in after 2 PM.",
-    contactPhone: "9876540001",
-  },
-  {
-    id: "prop-002",
-    ownerEmail: "owner@hidestay.com",
-    status: "pending",
-    propertyName: "Himalayan Valley View",
-    propertyType: "Homestay",
-    imageUrls: ["/assets/generated/category-homestay.dim_800x600.jpg"],
-    checkinTime: "1:00 PM",
-    checkoutTime: "10:00 AM",
-    city: "Mussoorie",
-    pricePerNight: BigInt(2800),
-    description:
-      "A cosy Himalayan homestay with panoramic valley views and warm hospitality in the heart of Mussoorie.",
-    amenities: ["WiFi", "Mountain View", "Fireplace", "Home-cooked Meals"],
-    address: "12, Mall Road, Mussoorie, Uttarakhand",
-    rules: "No loud music after 10 PM. Vegetarian meals only.",
-    contactPhone: "9876540002",
-  },
-  {
-    id: "prop-003",
-    ownerEmail: "owner@hidestay.com",
-    status: "rejected",
-    propertyName: "Nainital Lake Cottage",
-    propertyType: "Guest House",
-    imageUrls: ["/assets/generated/category-guesthouse.dim_800x600.jpg"],
-    checkinTime: "12:00 PM",
-    checkoutTime: "11:00 AM",
-    city: "Nainital",
-    pricePerNight: BigInt(3200),
-    description:
-      "A charming lakeside cottage near Naini Lake offering tranquil stays and scenic boat rides.",
-    amenities: ["Lake View", "Parking", "Room Service"],
-    address: "5, Mallital, Nainital, Uttarakhand",
-    rules: "No outdoor fires. Quiet hours 10 PM–7 AM.",
-    contactPhone: "9876540003",
-  },
-];
-
-const MOCK_USERS: RegisteredCustomer[] = [
-  {
-    name: "Arjun Sharma",
-    email: "arjun@example.com",
-    phone: "9876543001",
-    password: "",
-    createdAt: "2026-01-15T10:00:00.000Z",
-  },
-  {
-    name: "Priya Mehta",
-    email: "priya@example.com",
-    phone: "9876543002",
-    password: "",
-    createdAt: "2026-02-10T08:30:00.000Z",
-  },
-  {
-    name: "Rahul Singh",
-    email: "rahul@example.com",
-    phone: "9876543003",
-    password: "",
-    createdAt: "2026-02-20T14:00:00.000Z",
-  },
-];
 
 function UsersTab() {
   const { actor, isFetching } = useActor();
@@ -1612,7 +1400,7 @@ function UsersTab() {
   });
 
   const registeredUsers = getAllUsers();
-  const allUsers = registeredUsers.length === 0 ? MOCK_USERS : registeredUsers;
+  const allUsers = registeredUsers;
 
   const filtered = allUsers.filter(
     (u) =>
@@ -1669,18 +1457,12 @@ function UsersTab() {
   const getOwnerProperties = (ownerEmail: string): Property[] => {
     const backendAll = [...pendingProps, ...approvedProps];
     const fromBackend = backendAll.filter((p) => p.ownerEmail === ownerEmail);
-    if (fromBackend.length > 0) return fromBackend;
-    // Use mock for demo owner
-    const mock = MOCK_OWNER_PROPERTIES.filter(
-      (p) => p.ownerEmail === ownerEmail,
-    );
-    // Merge with any local edits
     if (localProperties.length > 0) {
-      return mock
-        .map((mp) => localProperties.find((lp) => lp.id === mp.id) ?? mp)
-        .filter((p) => p.ownerEmail === ownerEmail);
+      return fromBackend.map(
+        (mp) => localProperties.find((lp) => lp.id === mp.id) ?? mp,
+      );
     }
-    return mock;
+    return fromBackend;
   };
 
   const getStatusBadge = (status: string) => {
@@ -2451,62 +2233,7 @@ function FeaturedHotelsTab() {
     enabled: !!actor,
   });
 
-  const MOCK_APPROVED: Property[] = [
-    {
-      id: "prop-001",
-      propertyName: "The Mountain Retreat",
-      city: "Rishikesh",
-      address: "Near Laxman Jhula, Rishikesh",
-      propertyType: "Resort",
-      pricePerNight: BigInt(4500),
-      imageUrls: ["/assets/generated/category-resorts.dim_600x400.jpg"],
-      status: "approved",
-      ownerEmail: "owner@hidestay.com",
-      contactPhone: "+91 9876543210",
-      description: "Luxury mountain resort with stunning views.",
-      amenities: ["WiFi", "Pool", "Spa"],
-      rules: "No smoking",
-      checkinTime: "2:00 PM",
-      checkoutTime: "11:00 AM",
-    },
-    {
-      id: "prop-002",
-      propertyName: "Valley View Homestay",
-      city: "Mussoorie",
-      address: "Landour, Mussoorie",
-      propertyType: "Homestay",
-      pricePerNight: BigInt(2800),
-      imageUrls: ["/assets/generated/category-homestays.dim_600x400.jpg"],
-      status: "approved",
-      ownerEmail: "owner@hidestay.com",
-      contactPhone: "+91 9876543211",
-      description: "Cozy homestay with valley views.",
-      amenities: ["WiFi", "Breakfast"],
-      rules: "No pets",
-      checkinTime: "1:00 PM",
-      checkoutTime: "10:00 AM",
-    },
-    {
-      id: "prop-003",
-      propertyName: "Lake View Guest House",
-      city: "Nainital",
-      address: "Near Naini Lake, Nainital",
-      propertyType: "Guest House",
-      pricePerNight: BigInt(3200),
-      imageUrls: ["/assets/generated/category-guesthouses.dim_600x400.jpg"],
-      status: "approved",
-      ownerEmail: "owner@hidestay.com",
-      contactPhone: "+91 9876543212",
-      description: "Beautiful guest house with lake views.",
-      amenities: ["WiFi", "Parking"],
-      rules: "Quiet hours after 10 PM",
-      checkinTime: "12:00 PM",
-      checkoutTime: "11:00 AM",
-    },
-  ];
-
-  const displayProperties =
-    approvedProperties.length > 0 ? approvedProperties : MOCK_APPROVED;
+  const displayProperties = approvedProperties;
 
   const toggleFeatured = (id: string) => {
     setFeaturedIds((prev) => {
@@ -3282,52 +3009,6 @@ type SavedStayVerseTour = {
   hotspots: { id: string; fromArea: string; toArea: string; label: string }[];
 };
 
-const SAMPLE_STAYVERSE_TOURS: SavedStayVerseTour[] = [
-  {
-    id: "sv-sample-001",
-    tourName: "Grand Himalaya Resort Tour",
-    propertyId: "PROP-001",
-    ownerName: "Rajesh Kumar",
-    submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "pending",
-    areas: {
-      lobby: {
-        images: [],
-        description: "Grand entrance lobby with mountain views",
-      },
-      rooms: { images: [], description: "Luxury mountain view rooms" },
-      restaurant: { images: [], description: "Multi-cuisine restaurant" },
-    },
-    hotspots: [
-      { id: "hs-1", fromArea: "lobby", toArea: "rooms", label: "Go to Rooms" },
-      {
-        id: "hs-2",
-        fromArea: "lobby",
-        toArea: "restaurant",
-        label: "Go to Restaurant",
-      },
-    ],
-  },
-  {
-    id: "sv-sample-002",
-    tourName: "Mountain View Homestay Tour",
-    propertyId: "PROP-002",
-    ownerName: "Priya Sharma",
-    submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "pending",
-    areas: {
-      lobby: { images: [], description: "Cozy living room with fireplace" },
-      rooms: {
-        images: [],
-        description: "Comfortable bedrooms with valley views",
-      },
-    },
-    hotspots: [
-      { id: "hs-3", fromArea: "lobby", toArea: "rooms", label: "View Rooms" },
-    ],
-  },
-];
-
 function StayVerseToursTab() {
   const STAYVERSE_KEY = "hidestay_stayverse_tours";
   const [tours, setTours] = useState<SavedStayVerseTour[]>(() => {
@@ -3338,7 +3019,7 @@ function StayVerseToursTab() {
         if (parsed.length > 0) return parsed;
       }
     } catch {}
-    return SAMPLE_STAYVERSE_TOURS;
+    return [];
   });
   const [filter, setFilter] = useState<
     "all" | "pending" | "approved" | "rejected" | "updates_requested"

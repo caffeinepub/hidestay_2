@@ -6,194 +6,6 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Star } from "lucide-react";
 import { motion } from "motion/react";
 
-const MOCK_PROPERTIES: Record<
-  string,
-  Array<{
-    name: string;
-    location: string;
-    price: string;
-    rating: number;
-    seed: string;
-  }>
-> = {
-  Hotels: [
-    {
-      name: "The Grand Meridian",
-      location: "Bali, Indonesia",
-      price: "₹12,000/night",
-      rating: 4.8,
-      seed: "hotel1",
-    },
-    {
-      name: "Blue Horizon Hotel",
-      location: "Santorini, Greece",
-      price: "₹18,500/night",
-      rating: 4.9,
-      seed: "hotel2",
-    },
-    {
-      name: "Forest Edge Boutique",
-      location: "Kyoto, Japan",
-      price: "₹15,000/night",
-      rating: 4.7,
-      seed: "hotel3",
-    },
-    {
-      name: "Sunset Palms Hotel",
-      location: "Maldives",
-      price: "₹26,000/night",
-      rating: 5.0,
-      seed: "hotel4",
-    },
-    {
-      name: "Old Town Residency",
-      location: "Prague, Czech Republic",
-      price: "₹7,999/night",
-      rating: 4.6,
-      seed: "hotel5",
-    },
-    {
-      name: "Mountain View Inn",
-      location: "Swiss Alps, Switzerland",
-      price: "₹21,500/night",
-      rating: 4.8,
-      seed: "hotel6",
-    },
-  ],
-  Resorts: [
-    {
-      name: "Azure Bay Resort",
-      location: "Phuket, Thailand",
-      price: "₹31,999/night",
-      rating: 4.9,
-      seed: "resort1",
-    },
-    {
-      name: "Coral Cove Retreat",
-      location: "Seychelles",
-      price: "₹43,500/night",
-      rating: 5.0,
-      seed: "resort2",
-    },
-    {
-      name: "Jungle Canopy Resort",
-      location: "Costa Rica",
-      price: "₹24,500/night",
-      rating: 4.7,
-      seed: "resort3",
-    },
-    {
-      name: "Desert Bloom Oasis",
-      location: "Marrakech, Morocco",
-      price: "₹28,500/night",
-      rating: 4.8,
-      seed: "resort4",
-    },
-    {
-      name: "Lagoon Paradise",
-      location: "Fiji Islands",
-      price: "₹39,500/night",
-      rating: 4.9,
-      seed: "resort5",
-    },
-    {
-      name: "Peak Summit Resort",
-      location: "Queenstown, NZ",
-      price: "₹26,500/night",
-      rating: 4.6,
-      seed: "resort6",
-    },
-  ],
-  Homestays: [
-    {
-      name: "Grandma Rosa's Cottage",
-      location: "Tuscany, Italy",
-      price: "₹6,299/night",
-      rating: 4.9,
-      seed: "home1",
-    },
-    {
-      name: "Balinese Family Villa",
-      location: "Ubud, Bali",
-      price: "₹7,499/night",
-      rating: 4.8,
-      seed: "home2",
-    },
-    {
-      name: "Highland Croft Stay",
-      location: "Scotland, UK",
-      price: "₹5,499/night",
-      rating: 4.7,
-      seed: "home3",
-    },
-    {
-      name: "Bamboo Garden House",
-      location: "Chiang Mai, Thailand",
-      price: "₹4,699/night",
-      rating: 4.8,
-      seed: "home4",
-    },
-    {
-      name: "Old Town Apartment",
-      location: "Lisbon, Portugal",
-      price: "₹7,799/night",
-      rating: 4.9,
-      seed: "home5",
-    },
-    {
-      name: "Vineyard Farmhouse",
-      location: "Bordeaux, France",
-      price: "₹9,299/night",
-      rating: 4.7,
-      seed: "home6",
-    },
-  ],
-  "Guest Houses": [
-    {
-      name: "Maple Leaf Guest House",
-      location: "Vancouver, Canada",
-      price: "₹6,699/night",
-      rating: 4.7,
-      seed: "guest1",
-    },
-    {
-      name: "Harbor View Lodge",
-      location: "Cape Town, SA",
-      price: "₹7,999/night",
-      rating: 4.8,
-      seed: "guest2",
-    },
-    {
-      name: "The Wanderer's Rest",
-      location: "Kathmandu, Nepal",
-      price: "₹3,799/night",
-      rating: 4.6,
-      seed: "guest3",
-    },
-    {
-      name: "Colonial House Stay",
-      location: "Hanoi, Vietnam",
-      price: "₹4,999/night",
-      rating: 4.7,
-      seed: "guest4",
-    },
-    {
-      name: "Garden Gate House",
-      location: "Dublin, Ireland",
-      price: "₹9,699/night",
-      rating: 4.8,
-      seed: "guest5",
-    },
-    {
-      name: "Lakeside Guest House",
-      location: "Pokhara, Nepal",
-      price: "₹4,399/night",
-      rating: 4.9,
-      seed: "guest6",
-    },
-  ],
-};
-
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-1">
@@ -222,6 +34,180 @@ function mapPropertyTypeToCategory(type: string): string {
   return "Hotels";
 }
 
+function EmptyState({
+  category,
+  onBack,
+}: { category: string; onBack: () => void }) {
+  return (
+    <motion.div
+      data-ocid="results.empty_state"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative w-full overflow-hidden rounded-3xl my-4"
+      style={{
+        background:
+          "linear-gradient(135deg, #0d2d1a 0%, #1F7A4C 55%, #0d2d1a 100%)",
+        minHeight: "520px",
+      }}
+    >
+      {/* Decorative background SVG mountains */}
+      <svg
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full opacity-10 pointer-events-none"
+        viewBox="0 0 1200 520"
+        preserveAspectRatio="xMidYMid slice"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <polygon
+          points="0,520 200,200 400,340 600,100 800,280 1000,160 1200,300 1200,520"
+          fill="white"
+        />
+        <polygon
+          points="0,520 100,320 300,420 550,180 750,350 950,220 1200,380 1200,520"
+          fill="white"
+          opacity="0.5"
+        />
+      </svg>
+
+      {/* Decorative dots */}
+      <div className="absolute top-8 left-8 w-2 h-2 rounded-full bg-white/20" />
+      <div className="absolute top-14 left-16 w-1.5 h-1.5 rounded-full bg-white/15" />
+      <div className="absolute top-6 right-12 w-2.5 h-2.5 rounded-full bg-white/20" />
+      <div className="absolute top-20 right-20 w-1.5 h-1.5 rounded-full bg-white/15" />
+      <div
+        className="absolute bottom-16 left-12 w-2 h-2 rounded-full"
+        style={{ backgroundColor: "#FF993340" }}
+      />
+      <div
+        className="absolute bottom-20 right-16 w-3 h-3 rounded-full"
+        style={{ backgroundColor: "#FF993330" }}
+      />
+
+      {/* Saffron accent line */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 h-1 w-24 rounded-b-full"
+        style={{ backgroundColor: "#FF9933" }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-20 gap-6">
+        {/* Animated mountain + compass icon */}
+        <motion.div
+          animate={{ y: [0, -10, 0] }}
+          transition={{
+            duration: 3.5,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
+          className="relative"
+        >
+          <div
+            className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.12)",
+              border: "1.5px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            <svg
+              role="img"
+              aria-label="Mountain landscape icon"
+              viewBox="0 0 64 64"
+              className="w-12 h-12"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Mountain peaks */}
+              <path
+                d="M6 50 L20 22 L32 36 L44 14 L58 50 Z"
+                fill="white"
+                opacity="0.9"
+              />
+              <path d="M6 50 L20 22 L29 33" fill="#FF9933" opacity="0.8" />
+              {/* Snow caps */}
+              <path d="M20 22 L24 30 L16 30 Z" fill="white" />
+              <path d="M44 14 L49 24 L39 24 Z" fill="white" />
+              {/* Sun / star */}
+              <circle cx="52" cy="12" r="4" fill="#FF9933" opacity="0.9" />
+            </svg>
+          </div>
+          {/* Glow ring */}
+          <div
+            className="absolute inset-0 rounded-full animate-ping"
+            style={{
+              backgroundColor: "rgba(31,122,76,0.25)",
+              animationDuration: "2.5s",
+            }}
+          />
+        </motion.div>
+
+        {/* Saffron category badge */}
+        <motion.span
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.25, duration: 0.4 }}
+          className="px-4 py-1 rounded-full text-xs font-semibold tracking-widest uppercase font-body"
+          style={{
+            backgroundColor: "rgba(255,153,51,0.18)",
+            color: "#FF9933",
+            border: "1px solid rgba(255,153,51,0.35)",
+          }}
+        >
+          {category}
+        </motion.span>
+
+        {/* Headline */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.5 }}
+          className="flex flex-col gap-2"
+        >
+          <h2 className="font-display font-black text-white text-4xl sm:text-5xl leading-tight tracking-tight">
+            Discover Hidden Stays.
+          </h2>
+          <p className="text-white/70 font-body text-base sm:text-lg">
+            No {category} listed in this destination yet.
+          </p>
+        </motion.div>
+
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="text-white/50 font-body text-sm max-w-xs"
+        >
+          New properties will appear soon. Be the first to discover them.
+        </motion.p>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65, duration: 0.45 }}
+        >
+          <Button
+            data-ocid="results.back_home.button"
+            onClick={onBack}
+            className="mt-2 px-8 py-3 rounded-full font-body font-semibold text-white text-sm shadow-md"
+            style={{ backgroundColor: "#FF9933", border: "none" }}
+          >
+            Back to Home
+          </Button>
+        </motion.div>
+
+        {/* Decorative horizontal rule */}
+        <div className="flex items-center gap-3 opacity-30 mt-2">
+          <div className="h-px w-16 bg-white" />
+          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+          <div className="h-px w-16 bg-white" />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function StayResults() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/results" });
@@ -229,7 +215,7 @@ export default function StayResults() {
   const destination = search.destination ?? "";
 
   const { actor } = useActor();
-  const { data: backendProperties = [] } = useQuery<Property[]>({
+  const { data: backendProperties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["approvedProperties"],
     queryFn: async () => {
       if (!actor) return [];
@@ -238,15 +224,9 @@ export default function StayResults() {
     enabled: !!actor,
   });
 
-  const mockProps = MOCK_PROPERTIES[category] ?? MOCK_PROPERTIES.Hotels;
-
-  // Filter backend properties that match the current category
-  const matchingBackendProps = backendProperties.filter(
+  const properties = backendProperties.filter(
     (p) => mapPropertyTypeToCategory(p.propertyType) === category,
   );
-
-  // Combined count
-  const totalCount = mockProps.length + matchingBackendProps.length;
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -288,7 +268,9 @@ export default function StayResults() {
           className="mb-6"
         >
           <h1 className="font-display font-black text-foreground text-3xl sm:text-4xl">
-            {totalCount} stays found
+            {isLoading
+              ? "Searching..."
+              : `${properties.length} ${properties.length === 1 ? "stay" : "stays"} found`}
           </h1>
           <p className="text-muted-foreground font-body mt-1">
             {category} in{" "}
@@ -314,19 +296,24 @@ export default function StayResults() {
           </p>
         </motion.div>
 
-        {totalCount === 0 ? (
+        {isLoading ? (
           <div
-            data-ocid="results.empty_state"
+            data-ocid="results.loading_state"
             className="text-center py-20 text-muted-foreground font-body"
           >
-            No properties found. Try adjusting your search.
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            Loading available stays...
           </div>
+        ) : properties.length === 0 ? (
+          <EmptyState
+            category={category}
+            onBack={() => navigate({ to: "/dashboard" })}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {/* Mock properties */}
-            {mockProps.map((prop, i) => (
+            {properties.map((prop, i) => (
               <motion.div
-                key={prop.seed}
+                key={prop.id}
                 custom={i}
                 variants={cardVariants}
                 initial="hidden"
@@ -335,24 +322,31 @@ export default function StayResults() {
                 className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-green hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="h-44 overflow-hidden">
-                  <img
-                    src={`https://picsum.photos/seed/${prop.seed}/400/250`}
-                    alt={prop.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
+                  {prop.imageUrls.length > 0 ? (
+                    <img
+                      src={prop.imageUrls[0]}
+                      alt={prop.propertyName}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                      <MapPin className="w-8 h-8 text-primary/40" />
+                    </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <h3 className="font-display font-bold text-foreground text-base mb-0.5">
-                    {prop.name}
+                    {prop.propertyName}
                   </h3>
                   <div className="flex items-center gap-1 text-muted-foreground text-xs font-body mb-2">
                     <MapPin className="w-3 h-3" />
-                    {prop.location}
+                    {prop.city}, India
                   </div>
-                  <StarRating rating={prop.rating} />
+                  <StarRating rating={4.5} />
                   <div className="flex items-center justify-between mt-3">
                     <span className="font-display font-bold text-primary text-lg">
-                      {prop.price}
+                      ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}
+                      /night
                     </span>
                     <Button
                       size="sm"
@@ -362,12 +356,12 @@ export default function StayResults() {
                         navigate({
                           to: "/details",
                           search: {
-                            id: prop.seed,
+                            id: prop.id,
                             category,
-                            name: prop.name,
-                            location: prop.location,
-                            price: prop.price,
-                            rating: prop.rating,
+                            name: prop.propertyName,
+                            location: `${prop.city}, India`,
+                            price: `₹${Number(prop.pricePerNight).toLocaleString("en-IN")}/night`,
+                            rating: 4.5,
                           },
                         })
                       }
@@ -379,73 +373,6 @@ export default function StayResults() {
                 </div>
               </motion.div>
             ))}
-
-            {/* Backend approved properties */}
-            {matchingBackendProps.map((prop, i) => {
-              const globalIdx = mockProps.length + i;
-              return (
-                <motion.div
-                  key={prop.id}
-                  custom={globalIdx}
-                  variants={cardVariants}
-                  initial="hidden"
-                  animate="visible"
-                  data-ocid={`results.property.item.${globalIdx + 1}`}
-                  className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs hover:shadow-green hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="h-44 overflow-hidden">
-                    {prop.imageUrls.length > 0 ? (
-                      <img
-                        src={prop.imageUrls[0]}
-                        alt={prop.propertyName}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                        <MapPin className="w-8 h-8 text-primary/40" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-display font-bold text-foreground text-base mb-0.5">
-                      {prop.propertyName}
-                    </h3>
-                    <div className="flex items-center gap-1 text-muted-foreground text-xs font-body mb-2">
-                      <MapPin className="w-3 h-3" />
-                      {prop.city}, India
-                    </div>
-                    <StarRating rating={4.5} />
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="font-display font-bold text-primary text-lg">
-                        ₹{Number(prop.pricePerNight).toLocaleString("en-IN")}
-                        /night
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        data-ocid={`results.property.button.${globalIdx + 1}`}
-                        onClick={() =>
-                          navigate({
-                            to: "/details",
-                            search: {
-                              id: prop.id,
-                              category,
-                              name: prop.propertyName,
-                              location: `${prop.city}, India`,
-                              price: `₹${Number(prop.pricePerNight).toLocaleString("en-IN")}/night`,
-                              rating: 4.5,
-                            },
-                          })
-                        }
-                        className="font-body text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
           </div>
         )}
       </main>

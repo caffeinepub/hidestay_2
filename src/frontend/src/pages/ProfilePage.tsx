@@ -1,12 +1,16 @@
+import type { Booking } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
+import { useActor } from "@/hooks/useActor";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   CalendarDays,
   CheckCircle2,
+  Clock,
   LogOut,
   Mail,
   MessageSquare,
@@ -16,34 +20,43 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const MOCK_PAST_BOOKINGS = [
-  {
-    id: "HIDE-20260201-8821",
-    stayName: "Mountain Dew Resort",
-    location: "Manali, Himachal Pradesh",
-    propertyId: "resort1",
-    category: "Resorts",
-    checkin: "2026-02-01",
-    checkout: "2026-02-04",
-    status: "Completed",
-  },
-  {
-    id: "HIDE-20260115-4432",
-    stayName: "Grandma Rosa's Cottage",
-    location: "Ooty, Tamil Nadu",
-    propertyId: "homestay1",
-    category: "Homestays",
-    checkin: "2026-01-15",
-    checkout: "2026-01-18",
-    status: "Completed",
-  },
-];
-
 export default function ProfilePage() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
+  const { actor } = useActor();
   const [lookupId, setLookupId] = useState("");
   const [searched, setSearched] = useState(false);
+
+  const { data: allBookings = [] } = useQuery<Booking[]>({
+    queryKey: ["allBookings"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllBookings();
+    },
+    enabled: !!actor && role === "customer",
+  });
+
+  const myBookings = allBookings.filter(
+    (b) => b.email.toLowerCase() === (user?.email || "").toLowerCase(),
+  );
+
+  const getBookingStatus = (booking: Booking): string => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const checkout = new Date(booking.checkout);
+    checkout.setHours(0, 0, 0, 0);
+    const checkin = new Date(booking.checkin);
+    checkin.setHours(0, 0, 0, 0);
+    if (checkout < today) return "Completed";
+    if (checkin <= today) return "Active";
+    return "Upcoming";
+  };
+
+  const lookedUpBooking = searched
+    ? myBookings.find(
+        (b) => b.id.toLowerCase() === lookupId.trim().toLowerCase(),
+      )
+    : null;
 
   const handleLookup = () => {
     if (lookupId.trim()) setSearched(true);
@@ -54,12 +67,12 @@ export default function ProfilePage() {
     navigate({ to: "/dashboard" });
   };
 
-  const handleLeaveReview = (booking: (typeof MOCK_PAST_BOOKINGS)[number]) => {
+  const handleLeaveReview = (booking: Booking) => {
     navigate({
       to: "/details",
       search: {
-        id: booking.propertyId,
-        category: booking.category,
+        id: booking.id,
+        category: "Hotels",
         name: booking.stayName,
         location: booking.location,
         price: "₹8,500/night",
@@ -178,7 +191,26 @@ export default function ProfilePage() {
                 Search
               </Button>
             </div>
-            {searched && (
+            {searched && lookedUpBooking && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-sm font-body space-y-1">
+                <p className="font-semibold text-foreground">
+                  {lookedUpBooking.stayName}
+                </p>
+                <p className="text-muted-foreground">
+                  {lookedUpBooking.location}
+                </p>
+                <p className="text-muted-foreground">
+                  {lookedUpBooking.checkin} → {lookedUpBooking.checkout}
+                </p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {lookedUpBooking.id}
+                </p>
+                <Badge variant="secondary" className="text-[10px]">
+                  {getBookingStatus(lookedUpBooking)}
+                </Badge>
+              </div>
+            )}
+            {searched && !lookedUpBooking && (
               <p className="text-muted-foreground text-sm font-body text-center py-3">
                 No booking found for{" "}
                 <span className="font-semibold text-foreground">
@@ -193,55 +225,97 @@ export default function ProfilePage() {
         {/* Recent Activity */}
         <section>
           <h2 className="font-display font-bold text-foreground text-lg mb-3">
-            Recent Stays
+            My Bookings
           </h2>
-          <div className="space-y-3">
-            {MOCK_PAST_BOOKINGS.map((booking, i) => (
-              <Card
-                key={booking.id}
-                data-ocid={`profile.booking.item.${i + 1}`}
-                className="border-border shadow-xs"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-bold text-foreground">
-                        {booking.stayName}
-                      </h3>
-                      <p className="text-muted-foreground text-xs font-body">
-                        {booking.location}
-                      </p>
-                      <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground font-body">
-                        <CalendarDays className="w-3.5 h-3.5" />
-                        {booking.checkin} → {booking.checkout}
+          {myBookings.length === 0 ? (
+            <Card className="border-border shadow-xs">
+              <CardContent className="p-8 flex flex-col items-center gap-3 text-center">
+                <CalendarDays className="w-10 h-10 text-muted-foreground/40" />
+                <p className="font-body text-muted-foreground text-sm">
+                  No bookings yet. Start exploring hidden stays!
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    navigate({ to: "/search", search: { category: "Hotels" } })
+                  }
+                  className="bg-primary text-primary-foreground font-body font-semibold"
+                >
+                  Explore Stays
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {myBookings.map((booking, i) => {
+                const status = getBookingStatus(booking);
+                return (
+                  <Card
+                    key={booking.id}
+                    data-ocid={`profile.booking.item.${i + 1}`}
+                    className="border-border shadow-xs"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-display font-bold text-foreground">
+                            {booking.stayName}
+                          </h3>
+                          <p className="text-muted-foreground text-xs font-body">
+                            {booking.location}
+                          </p>
+                          <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground font-body">
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            {booking.checkin} → {booking.checkout}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground font-body">
+                            <User className="w-3.5 h-3.5" />
+                            {Number(booking.guests)} Guest
+                            {Number(booking.guests) !== 1 ? "s" : ""}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono mt-1">
+                            {booking.id}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <div
+                            className={`flex items-center gap-1 text-xs font-body font-semibold ${
+                              status === "Completed"
+                                ? "text-emerald-600"
+                                : status === "Active"
+                                  ? "text-blue-600"
+                                  : "text-amber-600"
+                            }`}
+                          >
+                            {status === "Completed" ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : status === "Active" ? (
+                              <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                              <Clock className="w-4 h-4" />
+                            )}
+                            {status}
+                          </div>
+                          {status === "Completed" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              data-ocid={`profile.review.button.${i + 1}`}
+                              onClick={() => handleLeaveReview(booking)}
+                              className="text-[10px] font-body h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/5 flex items-center gap-1"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              Leave a Review
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground font-mono mt-1">
-                        {booking.id}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                      <div className="flex items-center gap-1 text-emerald-600 text-xs font-body font-semibold">
-                        <CheckCircle2 className="w-4 h-4" />
-                        {booking.status}
-                      </div>
-                      {booking.status === "Completed" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          data-ocid={`profile.review.button.${i + 1}`}
-                          onClick={() => handleLeaveReview(booking)}
-                          className="text-[10px] font-body h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/5 flex items-center gap-1"
-                        >
-                          <MessageSquare className="w-3 h-3" />
-                          Leave a Review
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
     </div>

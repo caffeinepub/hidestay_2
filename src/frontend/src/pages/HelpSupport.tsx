@@ -13,6 +13,33 @@ import {
   MessageCircle,
   Phone,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+
+const SETTINGS_KEY = "hidestay_platform_settings";
+
+interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  supportPhone: string;
+  companyAddress: string;
+  footerText: string;
+}
+
+const DEFAULT_SETTINGS: PlatformSettings = {
+  platformName: "HIDESTAY",
+  supportEmail: "hidestayindiapvtltd@gmail.com",
+  supportPhone: "+91 98765 43210",
+  companyAddress: "Rishikesh, Uttarakhand, India",
+  footerText: "Discover Hidden Stays in India",
+};
+
+function loadSettings(): PlatformSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch {}
+  return DEFAULT_SETTINGS;
+}
 
 const FAQS = [
   {
@@ -21,7 +48,7 @@ const FAQS = [
   },
   {
     q: "How do I cancel my booking?",
-    a: "To cancel a booking, please contact us at support@hidestay.com or call our helpline at +91 98765 43210 with your Booking ID. Cancellation policies vary by property.",
+    a: "To cancel a booking, please contact our support team with your Booking ID. Cancellation policies vary by property.",
   },
   {
     q: "Is my payment secure?",
@@ -38,6 +65,23 @@ const FAQS = [
 ];
 
 export default function HelpSupport() {
+  const [settings, setSettings] = useState<PlatformSettings>(loadSettings);
+
+  useEffect(() => {
+    // Re-read settings on focus (in case admin changed settings in another tab)
+    const handleFocus = () => setSettings(loadSettings());
+    window.addEventListener("focus", handleFocus);
+    setSettings(loadSettings());
+    return () => window.removeEventListener("focus", handleFocus);
+  }, []);
+
+  const phoneClean = settings.supportPhone.replace(/[^0-9+]/g, "");
+  const whatsappNumber = phoneClean.startsWith("+")
+    ? phoneClean.slice(1)
+    : phoneClean.startsWith("0")
+      ? `91${phoneClean.slice(1)}`
+      : phoneClean;
+
   return (
     <div data-ocid="help.page" className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -59,7 +103,7 @@ export default function HelpSupport() {
             <div className="flex items-center gap-2 mb-3">
               <MapPin className="w-5 h-5 text-primary" />
               <span className="font-display font-black text-primary tracking-widest text-xl">
-                HIDESTAY
+                {settings.platformName}
               </span>
             </div>
             <p className="text-muted-foreground text-sm font-body mb-4">
@@ -69,18 +113,15 @@ export default function HelpSupport() {
             <div className="space-y-2 text-sm font-body">
               <div className="flex items-start gap-2 text-muted-foreground">
                 <Building2 className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                <span>
-                  HIDESTAY Pvt. Ltd., 42 Travel House, MG Road, Bengaluru,
-                  Karnataka — 560001, India
-                </span>
+                <span>{settings.companyAddress}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>support@hidestay.com</span>
+                <span>{settings.supportEmail}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>+91 98765 43210</span>
+                <span>{settings.supportPhone}</span>
               </div>
             </div>
           </CardContent>
@@ -93,7 +134,7 @@ export default function HelpSupport() {
           </h2>
           <div className="grid grid-cols-3 gap-3">
             <a
-              href="tel:+919876543210"
+              href={`tel:${phoneClean}`}
               data-ocid="help.call.button"
               className="flex flex-col items-center gap-2 p-4 bg-card border border-border rounded-2xl shadow-xs hover:shadow-green hover:-translate-y-0.5 transition-all text-center"
             >
@@ -104,11 +145,11 @@ export default function HelpSupport() {
                 Call Us
               </span>
               <span className="text-[10px] text-muted-foreground font-body">
-                +91 98765 43210
+                {settings.supportPhone}
               </span>
             </a>
             <a
-              href="mailto:support@hidestay.com"
+              href={`mailto:${settings.supportEmail}`}
               data-ocid="help.email.button"
               className="flex flex-col items-center gap-2 p-4 bg-card border border-border rounded-2xl shadow-xs hover:shadow-green hover:-translate-y-0.5 transition-all text-center"
             >
@@ -119,11 +160,11 @@ export default function HelpSupport() {
                 Email Us
               </span>
               <span className="text-[10px] text-muted-foreground font-body">
-                support@hidestay.com
+                {settings.supportEmail}
               </span>
             </a>
             <a
-              href="https://wa.me/919876543210"
+              href={`https://wa.me/${whatsappNumber}`}
               target="_blank"
               rel="noopener noreferrer"
               data-ocid="help.whatsapp.button"
