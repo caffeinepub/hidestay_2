@@ -51,7 +51,6 @@ function EmptyState({
         minHeight: "520px",
       }}
     >
-      {/* Decorative background SVG mountains */}
       <svg
         aria-hidden="true"
         className="absolute inset-0 w-full h-full opacity-10 pointer-events-none"
@@ -69,8 +68,6 @@ function EmptyState({
           opacity="0.5"
         />
       </svg>
-
-      {/* Decorative dots */}
       <div className="absolute top-8 left-8 w-2 h-2 rounded-full bg-white/20" />
       <div className="absolute top-14 left-16 w-1.5 h-1.5 rounded-full bg-white/15" />
       <div className="absolute top-6 right-12 w-2.5 h-2.5 rounded-full bg-white/20" />
@@ -83,16 +80,12 @@ function EmptyState({
         className="absolute bottom-20 right-16 w-3 h-3 rounded-full"
         style={{ backgroundColor: "#FF993330" }}
       />
-
-      {/* Saffron accent line */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 h-1 w-24 rounded-b-full"
         style={{ backgroundColor: "#FF9933" }}
       />
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-20 gap-6">
-        {/* Animated mountain + compass icon */}
         <motion.div
           animate={{ y: [0, -10, 0] }}
           transition={{
@@ -117,21 +110,17 @@ function EmptyState({
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Mountain peaks */}
               <path
                 d="M6 50 L20 22 L32 36 L44 14 L58 50 Z"
                 fill="white"
                 opacity="0.9"
               />
               <path d="M6 50 L20 22 L29 33" fill="#FF9933" opacity="0.8" />
-              {/* Snow caps */}
               <path d="M20 22 L24 30 L16 30 Z" fill="white" />
               <path d="M44 14 L49 24 L39 24 Z" fill="white" />
-              {/* Sun / star */}
               <circle cx="52" cy="12" r="4" fill="#FF9933" opacity="0.9" />
             </svg>
           </div>
-          {/* Glow ring */}
           <div
             className="absolute inset-0 rounded-full animate-ping"
             style={{
@@ -141,7 +130,6 @@ function EmptyState({
           />
         </motion.div>
 
-        {/* Saffron category badge */}
         <motion.span
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -156,7 +144,6 @@ function EmptyState({
           {category}
         </motion.span>
 
-        {/* Headline */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,7 +158,6 @@ function EmptyState({
           </p>
         </motion.div>
 
-        {/* Subtext */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -181,7 +167,6 @@ function EmptyState({
           New properties will appear soon. Be the first to discover them.
         </motion.p>
 
-        {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -197,7 +182,6 @@ function EmptyState({
           </Button>
         </motion.div>
 
-        {/* Decorative horizontal rule */}
         <div className="flex items-center gap-3 opacity-30 mt-2">
           <div className="h-px w-16 bg-white" />
           <div className="w-1.5 h-1.5 rounded-full bg-white" />
@@ -214,19 +198,33 @@ export default function StayResults() {
   const category = search.category ?? "Hotels";
   const destination = search.destination ?? "";
 
-  const { actor } = useActor();
-  const { data: backendProperties = [], isLoading } = useQuery<Property[]>({
-    queryKey: ["approvedProperties"],
+  const { actor, isFetching: actorLoading } = useActor();
+
+  const {
+    data: backendProperties = [],
+    isLoading,
+    isFetching,
+  } = useQuery<Property[]>({
+    queryKey: ["approvedProperties", actor ? "ready" : "loading"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllApprovedProperties();
+      try {
+        return await actor.getAllApprovedProperties();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor,
+    retry: 3,
+    retryDelay: 1000,
+    staleTime: 30000,
   });
 
   const properties = backendProperties.filter(
     (p) => mapPropertyTypeToCategory(p.propertyType) === category,
   );
+
+  const showLoading = actorLoading || isLoading || isFetching;
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -268,7 +266,7 @@ export default function StayResults() {
           className="mb-6"
         >
           <h1 className="font-display font-black text-foreground text-3xl sm:text-4xl">
-            {isLoading
+            {showLoading
               ? "Searching..."
               : `${properties.length} ${properties.length === 1 ? "stay" : "stays"} found`}
           </h1>
@@ -296,7 +294,7 @@ export default function StayResults() {
           </p>
         </motion.div>
 
-        {isLoading ? (
+        {showLoading ? (
           <div
             data-ocid="results.loading_state"
             className="text-center py-20 text-muted-foreground font-body"

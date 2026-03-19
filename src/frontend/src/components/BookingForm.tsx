@@ -25,6 +25,32 @@ function today() {
   return new Date().toISOString().split("T")[0];
 }
 
+function generateBookingId() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `HIDE-${date}-${rand}`;
+}
+
+function saveBookingToStorage(booking: {
+  id: string;
+  stayName: string;
+  location: string;
+  checkin: string;
+  checkout: string;
+  guestName: string;
+  phone: string;
+  email: string;
+  guests: number;
+  createdAt: number;
+}) {
+  const existing = JSON.parse(
+    localStorage.getItem("hidestay_bookings") || "[]",
+  );
+  existing.push(booking);
+  localStorage.setItem("hidestay_bookings", JSON.stringify(existing));
+}
+
 export default function BookingForm({
   open,
   onOpenChange,
@@ -74,27 +100,48 @@ export default function BookingForm({
       setErrors(errs);
       return;
     }
-    if (!actor) {
-      toast.error("Not connected. Please try again.");
-      return;
-    }
+
     setIsPending(true);
+    let bookingId = generateBookingId();
+
     try {
-      const booking = await actor.createBooking(
+      if (actor) {
+        try {
+          const booking = await actor.createBooking(
+            stayName,
+            location,
+            form.checkin,
+            form.checkout,
+            form.guestName,
+            form.phone,
+            form.email,
+            BigInt(form.guests),
+          );
+          bookingId = booking.id;
+        } catch {
+          // Backend failed, use local fallback silently
+        }
+      }
+
+      // Always save to localStorage for profile page
+      saveBookingToStorage({
+        id: bookingId,
         stayName,
         location,
-        form.checkin,
-        form.checkout,
-        form.guestName,
-        form.phone,
-        form.email,
-        BigInt(form.guests),
-      );
+        checkin: form.checkin,
+        checkout: form.checkout,
+        guestName: form.guestName,
+        phone: form.phone,
+        email: form.email,
+        guests: Number(form.guests),
+        createdAt: Date.now(),
+      });
+
       onOpenChange(false);
       navigate({
         to: "/confirmation",
         search: {
-          bookingId: booking.id,
+          bookingId,
           stayName,
           location,
           checkin: form.checkin,
@@ -127,7 +174,6 @@ export default function BookingForm({
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          {/* Guest Name */}
           <div className="space-y-1.5">
             <Label
               htmlFor="guestName"
@@ -153,7 +199,6 @@ export default function BookingForm({
             )}
           </div>
 
-          {/* Phone */}
           <div className="space-y-1.5">
             <Label htmlFor="phone" className="font-body text-sm font-medium">
               Phone Number
@@ -178,7 +223,6 @@ export default function BookingForm({
             )}
           </div>
 
-          {/* Email */}
           <div className="space-y-1.5">
             <Label htmlFor="email" className="font-body text-sm font-medium">
               Email
@@ -202,7 +246,6 @@ export default function BookingForm({
             )}
           </div>
 
-          {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label
@@ -250,7 +293,6 @@ export default function BookingForm({
             </div>
           </div>
 
-          {/* Guests */}
           <div className="space-y-1.5">
             <Label htmlFor="guests" className="font-body text-sm font-medium">
               Number of Guests

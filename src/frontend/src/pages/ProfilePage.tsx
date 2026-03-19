@@ -20,6 +20,41 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+function getLocalBookings(): Booking[] {
+  try {
+    const raw = localStorage.getItem("hidestay_bookings");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return parsed.map(
+      (b: {
+        id: string;
+        stayName: string;
+        location: string;
+        checkin: string;
+        checkout: string;
+        guestName: string;
+        phone: string;
+        email: string;
+        guests: number;
+        createdAt: number;
+      }) => ({
+        id: b.id,
+        stayName: b.stayName,
+        location: b.location,
+        checkin: b.checkin,
+        checkout: b.checkout,
+        guestName: b.guestName,
+        phone: b.phone,
+        email: b.email,
+        guests: BigInt(b.guests || 1),
+        createdAt: BigInt(b.createdAt || Date.now()),
+      }),
+    );
+  } catch {
+    return [];
+  }
+}
+
 export default function ProfilePage() {
   const { role, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -27,14 +62,26 @@ export default function ProfilePage() {
   const [lookupId, setLookupId] = useState("");
   const [searched, setSearched] = useState(false);
 
-  const { data: allBookings = [] } = useQuery<Booking[]>({
+  const { data: backendBookings = [] } = useQuery<Booking[]>({
     queryKey: ["allBookings"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllBookings();
+      try {
+        return await actor.getAllBookings();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && role === "customer",
   });
+
+  // Merge backend bookings with localStorage bookings (deduplicate by id)
+  const allBookings = (() => {
+    const local = getLocalBookings();
+    const backendIds = new Set(backendBookings.map((b) => b.id));
+    const uniqueLocal = local.filter((b) => !backendIds.has(b.id));
+    return [...backendBookings, ...uniqueLocal];
+  })();
 
   const myBookings = allBookings.filter(
     (b) => b.email.toLowerCase() === (user?.email || "").toLowerCase(),
@@ -113,7 +160,6 @@ export default function ProfilePage() {
 
   return (
     <div data-ocid="profile.page" className="min-h-screen bg-background pb-24">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-border shadow-xs">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
@@ -138,7 +184,6 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Profile Card */}
         <Card className="border-border shadow-xs">
           <CardContent className="p-5 flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center flex-shrink-0 shadow-green">
@@ -162,7 +207,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Booking Lookup */}
         <Card className="border-border shadow-xs">
           <CardHeader className="pb-3">
             <CardTitle className="font-display text-base text-foreground">
@@ -222,7 +266,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <section>
           <h2 className="font-display font-bold text-foreground text-lg mb-3">
             My Bookings
@@ -287,12 +330,10 @@ export default function ProfilePage() {
                                   : "text-amber-600"
                             }`}
                           >
-                            {status === "Completed" ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : status === "Active" ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
+                            {status === "Upcoming" ? (
                               <Clock className="w-4 h-4" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4" />
                             )}
                             {status}
                           </div>
