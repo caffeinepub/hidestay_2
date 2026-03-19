@@ -11,13 +11,15 @@
     <meta name="apple-mobile-web-app-title" content="HIDESTAY" />
     <meta name="application-name" content="HIDESTAY" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/assets/generated/hidestay-icon.dim_512x512.png" />
-    <link rel="icon" type="image/png" href="/assets/generated/hidestay-icon.dim_512x512.png" />
+    <link rel="apple-touch-icon" href="/assets/generated/hidestay-icon-512.dim_512x512.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/generated/hidestay-icon-512.dim_512x512.png" />
     <meta property="og:title" content="HIDESTAY - Discover Hidden Luxury Stays" />
     <meta property="og:description" content="Discover hidden and luxury stays across India." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/assets/generated/hidestay-icon.dim_512x512.png" />
-    <script type="module" crossorigin src="/assets/index-R0YQpBYK.js"></script>
+    <meta property="og:image" content="/assets/generated/hidestay-icon-512.dim_512x512.png" />
+    <meta name="msapplication-TileImage" content="/assets/generated/hidestay-icon-512.dim_512x512.png" />
+    <meta name="msapplication-TileColor" content="#1F7A4C" />
+    <script type="module" crossorigin src="/assets/index-TKdCw7UB.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BY1Gjvl6.css">
   </head>
   <body>
@@ -26,7 +28,13 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
+            .then(reg => {
+              console.log('SW registered:', reg.scope);
+              // Request periodic background sync permission
+              if ('periodicSync' in reg) {
+                reg.periodicSync.register('content-sync', { minInterval: 24 * 60 * 60 * 1000 }).catch(() => {});
+              }
+            })
             .catch(err => console.log('SW registration failed:', err));
         });
       }

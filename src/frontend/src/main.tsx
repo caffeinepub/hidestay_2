@@ -14,6 +14,13 @@ declare global {
   }
 }
 
+// PWA icon reference - keeps asset from being pruned by build pipeline
+const PWA_ICON = "/assets/generated/hidestay-icon-512.dim_512x512.png";
+if (typeof document !== "undefined") {
+  const link = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+  if (link) link.href = PWA_ICON;
+}
+
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
