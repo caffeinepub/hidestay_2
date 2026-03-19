@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "hidestay-app",
   "name": "HIDESTAY - Hidden Luxury Stays",
   "short_name": "HIDESTAY",
   "description": "Discover hidden and luxury stays across India. Book premium hotels, resorts, homestays and guest houses in Uttarakhand and beyond.",
@@ -12,9 +12,8 @@
   "scope": "/",
   "lang": "en-IN",
   "dir": "ltr",
-  "categories": ["travel", "lifestyle", "hotels", "booking"],
+  "categories": ["travel", "lifestyle"],
   "prefer_related_applications": false,
-  "iarc_rating_id": "",
   "icons": [
     {
       "src": "/assets/generated/hidestay-icon.dim_512x512.png",
@@ -73,18 +72,34 @@
   ],
   "screenshots": [
     {
-      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
-      "sizes": "512x512",
+      "src": "/assets/generated/hidestay-screenshot-narrow.dim_540x1170.png",
+      "sizes": "540x1170",
       "type": "image/png",
-      "label": "HIDESTAY Home Screen",
+      "label": "HIDESTAY Home - Discover Hidden Stays",
       "form_factor": "narrow"
+    },
+    {
+      "src": "/assets/generated/hidestay-screenshot-wide.dim_1280x800.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "label": "HIDESTAY Search Results",
+      "form_factor": "wide"
     }
   ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "shortcuts": [
     {
       "name": "Search Stays",
       "short_name": "Search",
-      "description": "Find your perfect stay",
+      "description": "Find your perfect stay in India",
       "url": "/?shortcut=search",
       "icons": [
         {
@@ -96,8 +111,20 @@
     {
       "name": "My Bookings",
       "short_name": "Bookings",
-      "description": "View your bookings",
+      "description": "View your booking history",
       "url": "/?shortcut=bookings",
+      "icons": [
+        {
+          "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Plan My Trip",
+      "short_name": "Trip Planner",
+      "description": "AI-powered trip planning",
+      "url": "/?shortcut=planner",
       "icons": [
         {
           "src": "/assets/generated/hidestay-icon.dim_512x512.png",
