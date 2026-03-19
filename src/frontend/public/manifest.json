@@ -1,28 +1,109 @@
 {
+  "id": "/",
   "name": "HIDESTAY - Hidden Luxury Stays",
   "short_name": "HIDESTAY",
-  "description": "Discover hidden and luxury stays across India",
+  "description": "Discover hidden and luxury stays across India. Book premium hotels, resorts, homestays and guest houses in Uttarakhand and beyond.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#1F7A4C",
   "theme_color": "#1F7A4C",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "/",
-  "lang": "en",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["travel", "lifestyle", "hotels", "booking"],
+  "prefer_related_applications": false,
+  "iarc_rating_id": "",
   "icons": [
     {
       "src": "/assets/generated/hidestay-icon.dim_512x512.png",
-      "sizes": "512x512",
+      "sizes": "72x72",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/assets/generated/hidestay-icon.dim_512x512.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["travel", "lifestyle"],
-  "prefer_related_applications": false
+  "screenshots": [
+    {
+      "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "label": "HIDESTAY Home Screen",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Stays",
+      "short_name": "Search",
+      "description": "Find your perfect stay",
+      "url": "/?shortcut=search",
+      "icons": [
+        {
+          "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Bookings",
+      "short_name": "Bookings",
+      "description": "View your bookings",
+      "url": "/?shortcut=bookings",
+      "icons": [
+        {
+          "src": "/assets/generated/hidestay-icon.dim_512x512.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }
